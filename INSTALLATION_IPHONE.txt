@@ -1,0 +1,24 @@
+INSTALLATION SUR IPHONE
+
+1. Mettre le dossier de l'application sur un hébergement HTTPS (par exemple Netlify Drop, GitHub Pages, Vercel ou votre site web).
+2. Sur l'iPhone, ouvrir l'adresse de l'application dans Safari.
+3. Toucher le bouton Partager (carré avec flèche vers le haut).
+4. Choisir « Sur l'écran d'accueil ».
+5. Valider « Ajouter ».
+
+L'application apparaîtra ensuite comme une icône normale.
+
+Fonctions incluses :
+- fiche chantier/client + téléphone + e-mail
+- type d'ouvrage avec option « Autre »
+- matériaux et type de pose avec option « Autre »
+- dimensions multiples
+- notes écrites et dictée si Safari la prend en charge
+- photos depuis l'appareil photo
+- recherche web de quincaillerie
+- génération d'une demande de prix fournisseur
+- génération d'une base de texte de devis
+- enregistrement local de plusieurs projets sur l'appareil
+- fonctionnement hors ligne après la première ouverture grâce au mode PWA
+
+ATTENTION : les projets sont enregistrés localement sur l'iPhone. Pour une synchronisation avec plusieurs appareils, il faudra ajouter un compte utilisateur et un stockage en ligne.
