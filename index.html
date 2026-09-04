@@ -173,6 +173,12 @@ if ('serviceWorker' in navigator) {
     .register('sw.js', { updateViaCache: 'none' })
     .then(registration => registration.update())
     .catch(() => {});
+  }
+
+$('projectDate').value=new Date().toISOString().slice(0,10);
+bindMics();
+addWork();
+renderProjects();
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();addWork();renderProjects();
 </script>
 </body></html>
