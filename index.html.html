@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Relevé Chantier" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Relevé Chantier</title>
+  <style>
+    :root{--bg:#f3f4f6;--card:#fff;--ink:#111827;--muted:#6b7280;--line:#d1d5db;--pri:#0f172a;--ok:#166534}
+    *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
+    header h1{margin:0;font-size:20px}header small{color:var(--muted)}
+    main{max-width:900px;margin:auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
+    .card,.work-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .work-card{border:2px solid #e5e7eb}.work-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.work-head h3{margin:0;font-size:16px}
+    h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+    label{display:block;font-size:13px;font-weight:600;margin:0 0 5px}input,select,textarea,button{font:inherit}
+    input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff}textarea{min-height:96px;resize:vertical}
+    button{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:var(--pri);color:#fff}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}.ghost{background:#fff;border:1px solid var(--line)}
+    .field-with-mic{display:grid;grid-template-columns:1fr 46px;gap:6px;align-items:end}.mic{padding:10px 8px;font-size:18px;line-height:1;background:#eef2ff;border:1px solid #c7d2fe}.mic.listening{outline:2px solid #166534;background:#dcfce7}
+    .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}.hint{font-size:12px;color:var(--muted);margin-top:5px}.status{font-size:12px;margin-top:6px;color:var(--ok)}.hidden{display:none!important}
+    .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+    .specific-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px}.specific-title{grid-column:1/-1;font-weight:800;color:#334155}.voice-all{grid-column:1/-1;background:#dbeafe;color:#1e3a8a}.voice-help{grid-column:1/-1;font-size:12px;color:#475569}.sketch-wrap{grid-column:1/-1}.sketch-canvas{display:block;width:100%;height:340px;touch-action:none;background:#fff;border:1px solid #94a3b8;border-radius:10px}.sketch-tools{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.sketch-tools button{flex:1;min-width:100px}.tool-active{outline:3px solid #2563eb}.section-label{grid-column:1/-1;margin:4px 0 0;color:#334155}
+    .voice-panel{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #93c5fd}.voice-main{width:100%;font-size:17px;background:#1d4ed8;color:#fff}.voice-main.listening{background:#b91c1c;outline:4px solid #fecaca}.voice-feedback{margin-top:10px;padding:10px;background:#fff;border:1px solid #bfdbfe;border-radius:10px;min-height:43px}.command-list{font-size:12px;color:#475569;line-height:1.55;margin-top:9px}
+    .footerbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:6}.footerbar button{flex:1}
+    @media(max-width:640px){.grid,.specific-fields{grid-template-columns:1fr}.photo-grid{grid-template-columns:repeat(2,1fr)}.work-head{align-items:flex-start}.work-head .danger{flex:0 0 auto}.sketch-canvas{height:300px}}
+  </style>
+</head>
+<body>
+<header><h1>Relevé Chantier</h1><small>Menuiserie & agencement</small></header>
+<main>
+  <section class="card">
+    <h2>Projet / Client</h2>
+    <div class="grid">
+      <div><label>Nom du projet / chantier</label><div class="field-with-mic"><input id="projectTitle" placeholder="Ex. Remplacement porte d'entrée" /><button class="mic" data-target="projectTitle" type="button">🎙️</button></div></div>
+      <div><label>Date</label><input id="projectDate" type="date" /></div>
+      <div><label>Client / contact</label><div class="field-with-mic"><input id="contactName" placeholder="Nom du client" /><button class="mic" data-target="contactName" type="button">🎙️</button></div></div>
+      <div><label>Téléphone</label><div class="field-with-mic"><input id="contactPhone" type="tel" placeholder="06 ..." /><button class="mic" data-target="contactPhone" type="button">🎙️</button></div></div>
+      <div class="full"><label>E-mail</label><div class="field-with-mic"><input id="contactEmail" type="email" placeholder="client@exemple.fr" /><button class="mic" data-target="contactEmail" type="button">🎙️</button></div></div>
+      <div class="full"><label>Adresse du chantier</label><div class="field-with-mic"><textarea id="address" placeholder="Adresse, accès, contraintes de stationnement..."></textarea><button class="mic" data-target="address" type="button">🎙️</button></div></div>
+    </div>
+  </section>
+
+  <section class="card voice-panel">
+    <h2>Assistant vocal de l’application</h2>
+    <button class="voice-main" id="voiceAssistant" type="button">🎙️ Démarrer les commandes vocales</button>
+    <div class="voice-feedback" id="voiceFeedback">Appuyez sur le bouton, puis parlez naturellement.</div>
+    <details><summary class="hint" style="cursor:pointer;margin-top:9px">Voir des exemples de commandes</summary><div class="command-list">
+      « Enregistrer le chantier » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
+      « Longueur pièce 5 mètres, largeur pièce 4 mètres, type parquet contrecollé » • « Hauteur à monter 2 800 millimètres, largeur trémie 900 »<br>
+      « Nom du chantier Madame Martin » • « Client Monsieur Dupont » • « Adresse 10 rue… » • « Notes chantier accès difficile »<br>
+      « Créer la demande de prix » • « Créer le devis » • « Ouvrir le chantier Dupont » • « Nouveau chantier » • « Arrêter l’assistant »
+    </div></details>
+  </section>
+
+  <section class="card">
+    <h2>Ouvrages et dimensions</h2>
+    <div id="works"></div>
+    <button class="secondary" id="addWork" type="button">+ Ajouter un ouvrage</button>
+    <div class="hint">Chaque ouvrage possède son propre type, matériau, pose, dimensions, allège, quantité et observations.</div>
+  </section>
+
+  <section class="card">
+    <h2>Notes chantier générales</h2>
+    <div class="field-with-mic"><textarea id="notes" placeholder="Décrire l'existant, les travaux, les finitions, les contraintes..."></textarea><button class="mic" data-target="notes" type="button">🎙️</button></div>
+    <div class="status" id="dictationStatus"></div>
+  </section>
+
+  <section class="card">
+    <h2>Photos générales du chantier</h2>
+    <input id="photos" type="file" accept="image/*" capture="environment" multiple />
+    <div class="hint">Sur iPhone : tu peux prendre les photos directement depuis l'appareil photo.</div>
+    <div id="photoGrid" class="photo-grid"></div>
+  </section>
+
+  <section class="card">
+    <h2>Quincaillerie / fournisseur</h2>
+    <div class="grid">
+      <div><label>Fabricant / fournisseur envisagé</label><div class="field-with-mic"><input id="supplier" placeholder="Ex. K-LINE, ALF, Point P..." /><button class="mic" data-target="supplier" type="button">🎙️</button></div></div>
+      <div><label>Référence / gamme</label><div class="field-with-mic"><input id="hardwareRef" placeholder="Référence connue ou à rechercher" /><button class="mic" data-target="hardwareRef" type="button">🎙️</button></div></div>
+      <div class="full"><label>Besoin spécifique</label><div class="field-with-mic"><textarea id="hardwareNeed" placeholder="Serrure, poignée, paumelle, moteur, cylindre, rail, quincaillerie particulière..."></textarea><button class="mic" data-target="hardwareNeed" type="button">🎙️</button></div></div>
+    </div>
+    <div class="row"><button class="ghost" id="searchWeb" type="button">🔎 Rechercher la quincaillerie sur Internet</button></div>
+  </section>
+
+  <section class="card">
+    <h2>Résumé automatique</h2>
+    <div class="row"><button class="primary" id="makeSupplier" type="button">Créer demande de prix fournisseur</button><button class="secondary" id="makeQuote" type="button">Créer base de devis</button></div>
+    <label style="margin-top:10px">Texte généré</label><textarea id="summary" style="min-height:220px" placeholder="Le résumé apparaîtra ici..."></textarea>
+    <div class="row"><button class="ghost" id="copySummary" type="button">Copier le texte</button><button class="ghost" id="shareSummary" type="button">Partager</button></div>
+  </section>
+
+  <section class="card"><h2>Mes projets enregistrés</h2><div id="projectList"><span class="hint">Aucun projet enregistré.</span></div></section>
+</main>
+<div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
+<script>
+const $=id=>document.getElementById(id);
+let photoData=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0;
+const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
+const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
+const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
+const installs=['','Rénovation','Dépose totale','En tunnel','En applique','En feuillure','Neuf','Autre'];
+const specificSchemas={
+  'Parquet':[
+    ['roomLength','Longueur de la pièce','m','decimal'],['roomWidth','Largeur de la pièce','m','decimal'],['roomArea','Surface calculée / relevée','m²','decimal'],
+    ['parquetType','Type de parquet','Massif|Contrecollé|Stratifié|Autre','select'],['layingPattern','Sens / motif de pose','À l’anglaise|À bâtons rompus|Point de Hongrie|Dalles|Autre','select'],
+    ['layingMethod','Mode de pose','Flottante|Collée|Clouée|Autre','select'],['boardSize','Dimensions des lames','mm','text'],['parquetThickness','Épaisseur du parquet','mm','decimal'],
+    ['supportType','Support existant','Dalle béton|Chape|Plancher bois|Carrelage|Ancien parquet|Autre','select'],['supportState','État / planéité / humidité du support','À préciser','text'],
+    ['skirting','Plinthes : type, hauteur et longueur','ml','text'],['thresholds','Seuils, raccords et jeux périphériques','À préciser','text'],['finish','Essence, teinte et finition','À préciser','text']
+  ],
+  'Escalier':[
+    ['floorHeight','Hauteur sol fini à sol fini','mm','decimal'],['openingLength','Longueur de la trémie','mm','decimal'],['openingWidth','Largeur de la trémie','mm','decimal'],
+    ['trimmerThickness','Épaisseur du linçoir','mm','decimal'],['slabThickness','Épaisseur plancher / dalle','mm','decimal'],['stairWidth','Largeur souhaitée de l’escalier','mm','decimal'],
+    ['stairShape','Forme de l’escalier','Droit|Quart tournant bas|Quart tournant haut|Deux quarts tournants|Hélicoïdal|Escamotable|Autre','select'],['turnDirection','Sens du tournant en montant','Droite|Gauche|Sans objet','select'],
+    ['stepCount','Nombre de marches existant / souhaité','Nombre','numeric'],['stepHeight','Hauteur de marche','mm','decimal'],['tread','Giron','mm','decimal'],
+    ['headroom','Échappée disponible','mm','decimal'],['startingSpace','Reculement disponible','mm','decimal'],['stringer','Type de limon','À la française|Crémaillère|Central|Sans limon|Autre','select'],
+    ['guardrail','Garde-corps / main courante','Description','text'],['stairMaterial','Essence / matériau / finition','Description','text']
+  ],
+  'Fenêtre':[['opening','Type d’ouverture','Fixe|À la française|Oscillo-battant|Soufflet|Coulissant|Autre','select'],['frameSize','Dimensions hors-tout','mm','text'],['glazing','Composition du vitrage','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text'],['ventilation','Entrée d’air','Débit / type','text']],
+  "Porte d'entrée":[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Droite tirante|Gauche tirante','select'],['clearPassage','Passage utile','mm','decimal'],['threshold','Type de seuil','PMR 20 mm|Standard|Autre','select'],['lock','Serrure / cylindre / contrôle d’accès','Description','text'],['glazing','Vitrage / panneau / imposte','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
+  'Porte intérieure':[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Va-et-vient|Coulissante','select'],['wallThickness','Épaisseur de cloison finie','mm','decimal'],['doorLeaf','Dimensions du vantail','mm','text'],['doorType','Type de porte','Isoplane|Postformée|Stratifiée|Hydrofuge|Coupe-feu|Acoustique|Autre','select'],['hardware','Quincaillerie / serrure','Description','text']],
+  'Porte de garage':[['garageType','Type','Sectionnelle|Basculante|Enroulable|Battante|Coulissante latérale|Autre','select'],['clearOpening','Baie / passage libre','mm','text'],['headroom','Retombée de linteau','mm','decimal'],['sideRoom','Écoinçons gauche / droite','mm','text'],['motorization','Manœuvre / motorisation','Manuelle|Motorisée radio|Autre','select']],
+  'Baie coulissante':[['leafCount','Nombre de vantaux / rails','Description','text'],['frameSize','Dimensions hors-tout','mm','text'],['glazing','Composition du vitrage','Description','text'],['clearPassage','Passage utile','mm','decimal'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
+  'Volet roulant motorisé':[['boxType','Type de coffre','Rénovation|Traditionnel|Bloc-baie|Tunnel|Existant','select'],['boxSize','Dimensions / accès du coffre','mm','text'],['guides','Coulisses / lame finale','Description','text'],['apron','Tablier : matière, lame, couleur','Description','text'],['motor','Moteur / commande / alimentation','Description','text']],
+  'Volet roulant manuel':[['boxType','Type de coffre','Rénovation|Traditionnel|Bloc-baie|Tunnel|Existant','select'],['boxSize','Dimensions / accès du coffre','mm','text'],['operation','Manœuvre','Sangle|Tringle oscillante|Tirage direct|Autre','select'],['apron','Tablier : matière, lame, couleur','Description','text']],
+  'Volet bois':[['leafCount','Nombre de vantaux','Nombre','numeric'],['shutterType','Type','Battant|Persienné|Plein|Barres et écharpes|Coulissant|Autre','select'],['hinges','Gonds / arrêts / espagnolette','Description','text'],['woodFinish','Essence et finition','Description','text']],
+  'Store':[['storeType','Type de store','Screen extérieur|Banne|Enrouleur intérieur|Vénitien|Autre','select'],['fabric','Toile / coloris / transparence','Description','text'],['guides','Guidage / coulisses','Description','text'],['operation','Manœuvre / motorisation','Description','text']],
+  'Placard':[['openingSize','Dimensions de la baie','mm','text'],['doorCount','Nombre de portes','Nombre','numeric'],['facadeType','Façade','Coulissante|Battante|Pliante|Sans façade|Autre','select'],['interiorLayout','Aménagement intérieur','Description','text'],['decor','Décor / finition','Description','text']],
+  'Agencement':[['areaSize','Dimensions de la zone','mm','text'],['layoutUse','Usage / éléments à réaliser','Description','text'],['panels','Panneaux / épaisseurs / décors','Description','text'],['hardware','Quincailleries','Description','text'],['services','Passages techniques / réseaux','Description','text']],
+  'Garde-corps / main courante':[['totalLength','Longueur totale','mm ou ml','text'],['dropHeight','Hauteur de chute','mm','decimal'],['guardHeight','Hauteur du garde-corps','mm','decimal'],['fixing','Type de fixation','À la française|À l’anglaise|Sur platine|Autre','select'],['infill','Remplissage / barreaudage','Description','text']],
+  'Bardage':[['surface','Surface','m²','decimal'],['boardProfile','Profil / dimensions des lames','Description','text'],['support','Support / ossature','Description','text'],['insulation','Isolation / pare-pluie / ventilation','Description','text'],['finish','Essence / finition / coloris','Description','text']],
+  'Vitrage':[['glassClearSize','Clair de vitrage','mm','text'],['glassMakeup','Composition du vitrage','Description','text'],['glassThickness','Épaisseur totale','mm','decimal'],['rebate','Feuillure / parcloses / calage','Description','text'],['access','Accès et moyen de levage','Description','text']]
+};
+const opt=(arr,val='')=>arr.map(x=>`<option ${x===val?'selected':''}>${x||'Choisir…'}</option>`).join('');
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function micButton(target){return `<button class="mic" type="button" data-target="${target}">🎙️</button>`}
+function addWork(w={}){
+  const id='w'+(++workCounter),d=document.createElement('div');d.className='work-card';d.dataset.id=id;d._photos=Array.isArray(w.photos)?[...w.photos]:[];d._specific=w.specific||{};d._sketch=w.sketch||'';
+  d.innerHTML=`<div class="work-head"><h3>Ouvrage <span class="work-number"></span></h3><button class="danger remove-work" type="button">Supprimer</button></div>
+  <div class="grid">
+    <div><label>Type d'ouvrage</label><div class="field-with-mic"><select class="wtype">${opt(workTypes,w.type)}</select>${micButton(id+'-type')}</div></div>
+    <div class="wother-wrap ${w.type==='Autre'?'':'hidden'}"><label>Autre type</label><div class="field-with-mic"><input class="wother" value="${esc(w.other)}" placeholder="Préciser l'ouvrage">${micButton(id+'-other')}</div></div>
+    <div class="specific-fields hidden"></div>
+    <div><label>Matériau</label><div class="field-with-mic"><select class="wmaterial">${opt(materials,w.material)}</select>${micButton(id+'-material')}</div></div>
+    <div class="mother-wrap ${w.material==='Autre'?'':'hidden'}"><label>Autre matériau</label><div class="field-with-mic"><input class="mother" value="${esc(w.materialOther)}" placeholder="Préciser">${micButton(id+'-materialOther')}</div></div>
+    <div><label>Type de pose</label><div class="field-with-mic"><select class="winstall">${opt(installs,w.install)}</select>${micButton(id+'-install')}</div></div>
+    <div class="iother-wrap ${w.install==='Autre'?'':'hidden'}"><label>Autre pose</label><div class="field-with-mic"><input class="iother" value="${esc(w.installOther)}" placeholder="Préciser">${micButton(id+'-installOther')}</div></div>
+    <div><label>Largeur</label><div class="field-with-mic"><input class="ww" value="${esc(w.width)}" inputmode="decimal" placeholder="mm">${micButton(id+'-width')}</div></div>
+    <div><label>Hauteur</label><div class="field-with-mic"><input class="wh" value="${esc(w.height)}" inputmode="decimal" placeholder="mm">${micButton(id+'-height')}</div></div>
+    <div><label>Hauteur d'allège</label><div class="field-with-mic"><input class="wa" value="${esc(w.sill)}" inputmode="decimal" placeholder="mm">${micButton(id+'-sill')}</div></div>
+    <div><label>Épaisseur mur / profondeur</label><div class="field-with-mic"><input class="wd" value="${esc(w.depth)}" inputmode="decimal" placeholder="mm">${micButton(id+'-depth')}</div></div>
+    <div><label>Quantité</label><div class="field-with-mic"><input class="wq" value="${esc(w.qty||1)}" inputmode="numeric">${micButton(id+'-qty')}</div></div>
+    <div><label>Repère / localisation</label><div class="field-with-mic"><input class="wloc" value="${esc(w.location)}" placeholder="Ex. Chambre 1, OB3...">${micButton(id+'-location')}</div></div>
+    <div class="full"><label>Dimensions / cotes complémentaires</label><div class="field-with-mic"><textarea class="wextra" placeholder="Ex. clair de passage, hors-tout, réservation, coffre, jeux...">${esc(w.extra)}</textarea>${micButton(id+'-extra')}</div></div>
+    <div class="full"><label>Observations sur l'ouvrage</label><div class="field-with-mic"><textarea class="wobs" placeholder="Finition, couleur, sens d'ouverture, vitrage, occultation, contraintes...">${esc(w.obs)}</textarea>${micButton(id+'-obs')}</div></div>
+    <button class="voice-all" type="button">🎙️ Dicter toutes les informations de cet ouvrage</button>
+    <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres, largeur pièce 3 virgule 8, type parquet contrecollé, pose collée, épaisseur 14 millimètres ». Marquez une courte pause entre chaque information.</div>
+    <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-tools"><button class="ghost pen tool-active" type="button">✏️ Crayon</button><button class="ghost eraser" type="button">◻️ Gomme</button><button class="ghost add-text" type="button">T Ajouter une cote / note</button><button class="danger clear-sketch" type="button">Effacer le croquis</button></div><canvas class="sketch-canvas"></canvas><div class="hint">Dessinez directement avec le doigt ou un stylet. Le croquis est enregistré avec cet ouvrage.</div></div>
+    <div class="full"><label>Photos de cet ouvrage</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Prendre une ou plusieurs photos liées uniquement à cet ouvrage.</div><div class="photo-grid wphoto-grid"></div></div>
+  </div>`;
+  d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks()};
+  d.querySelector('.wtype').onchange=e=>{d.querySelector('.wother-wrap').classList.toggle('hidden',e.target.value!=='Autre');renderSpecific(d,e.target.value)};
+  d.querySelector('.wmaterial').onchange=e=>d.querySelector('.mother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
+  d.querySelector('.winstall').onchange=e=>d.querySelector('.iother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
+  d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d)};
+  d.querySelector('.voice-all').onclick=()=>startFullVoice(d);
+  $('works').appendChild(d);renumberWorks();renderSpecific(d,w.type||'');bindMics(d);renderWorkPhotos(d);initSketch(d);
+}
+function renumberWorks(){[...document.querySelectorAll('.work-card')].forEach((d,i)=>d.querySelector('.work-number').textContent=i+1)}
+function specificData(d){const out={};d.querySelectorAll('[data-specific]').forEach(el=>out[el.dataset.specific]=el.value);return out}
+function renderSpecific(d,type){
+  Object.assign(d._specific,specificData(d));const box=d.querySelector('.specific-fields'),schema=specificSchemas[type]||[];box.innerHTML='';box.classList.toggle('hidden',!schema.length);if(!schema.length)return;
+  box.innerHTML=`<div class="specific-title">Informations spécifiques — ${esc(type)}</div>`+schema.map(([key,label,choices,kind])=>{
+    const value=d._specific[key]||'',target=d.dataset.id+'-spec_'+key;
+    const control=kind==='select'?`<select data-specific="${key}"><option value="">Choisir…</option>${choices.split('|').map(x=>`<option ${x===value?'selected':''}>${esc(x)}</option>`).join('')}</select>`:`<input data-specific="${key}" value="${esc(value)}" inputmode="${kind==='decimal'?'decimal':kind==='numeric'?'numeric':'text'}" placeholder="${esc(choices)}">`;
+    return `<div><label>${esc(label)}</label><div class="field-with-mic">${control}${micButton(target)}</div></div>`}).join('');bindMics(box);
+}
+function initSketch(d){
+  const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d');let drawing=false,last=null,mode='pen',noteLine=0;
+  function size(){const saved=d._sketch,w=Math.max(280,c.clientWidth),h=c.clientHeight,ratio=Math.max(1,window.devicePixelRatio||1);c.width=w*ratio;c.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineCap='round';ctx.lineJoin='round';ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);if(saved){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,w,h);im.src=saved}}
+  function point(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.clientWidth/r.width,y:(e.clientY-r.top)*c.clientHeight/r.height}}
+  function saveSketch(){d._sketch=c.toDataURL('image/png')}
+  c.onpointerdown=e=>{drawing=true;last=point(e);c.setPointerCapture(e.pointerId);e.preventDefault()};
+  c.onpointermove=e=>{if(!drawing)return;const p=point(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.strokeStyle=mode==='eraser'?'#fff':'#111827';ctx.lineWidth=mode==='eraser'?24:3;ctx.stroke();last=p;e.preventDefault()};
+  c.onpointerup=c.onpointercancel=e=>{if(drawing){drawing=false;saveSketch()}e.preventDefault()};
+  d.querySelector('.pen').onclick=()=>{mode='pen';d.querySelector('.pen').classList.add('tool-active');d.querySelector('.eraser').classList.remove('tool-active')};
+  d.querySelector('.eraser').onclick=()=>{mode='eraser';d.querySelector('.eraser').classList.add('tool-active');d.querySelector('.pen').classList.remove('tool-active')};
+  d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){d._sketch='';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.clientWidth,c.clientHeight)}};
+  d.querySelector('.add-text').onclick=()=>{const t=prompt('Saisir la cote ou la note à ajouter au croquis :');if(!t)return;ctx.fillStyle='#111827';ctx.font='bold 18px sans-serif';ctx.fillText(t,12,28+(noteLine++%12)*24);saveSketch()};
+  requestAnimationFrame(size);
+}
+function workData(){return [...document.querySelectorAll('.work-card')].map(d=>({
+  type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:d.querySelector('.wobs').value,specific:specificData(d),sketch:d._sketch||'',photos:Array.isArray(d._photos)?d._photos:[]}))}
+function shown(v,other){return v==='Autre'?(other||'Autre'):v}
+function normalize(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+function setSelectByVoice(sel,text){const n=normalize(text);let best=[...sel.options].find(o=>normalize(o.textContent)===n)||[...sel.options].find(o=>normalize(o.textContent).includes(n)||n.includes(normalize(o.textContent)));if(best){sel.value=best.value;sel.dispatchEvent(new Event('change'));return true}return false}
+function resolveMicTarget(key){
+  if(!key.includes('-'))return $(key);
+  const cut=key.indexOf('-'),id=key.slice(0,cut),field=key.slice(cut+1);const d=document.querySelector(`.work-card[data-id="${id}"]`);if(!d)return null;
+  if(field.startsWith('spec_'))return d.querySelector(`[data-specific="${field.slice(5)}"]`);
+  const map={type:'.wtype',other:'.wother',material:'.wmaterial',materialOther:'.mother',install:'.winstall',installOther:'.iother',width:'.ww',height:'.wh',sill:'.wa',depth:'.wd',qty:'.wq',location:'.wloc',extra:'.wextra',obs:'.wobs'};return d.querySelector(map[field]);
+}
+function startVoice(target,btn){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur.';return}
+  if(recognition)try{recognition.stop()}catch(e){}
+  recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;activeMic=btn;btn.classList.add('listening');$('dictationStatus').textContent='Écoute en cours…';
+  recognition.onresult=e=>{const text=e.results[e.results.length-1][0].transcript.trim();if(target.tagName==='SELECT'){if(!setSelectByVoice(target,text)){$('dictationStatus').textContent='Choix non reconnu : '+text}}else{const numeric=target.inputMode==='decimal'||target.inputMode==='numeric';const clean=numeric?text.replace(/\s/g,'').replace(/virgule/i,'.').replace(/[^0-9.,]/g,''):text;target.value=target.value&&target.tagName==='TEXTAREA'?target.value+' '+clean:clean;target.dispatchEvent(new Event('input'));}};
+  recognition.onend=()=>{if(activeMic)activeMic.classList.remove('listening');activeMic=null;$('dictationStatus').textContent='Dictée terminée.'};recognition.onerror=()=>{$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.'};recognition.start();
+}
+function voiceAliases(key,label){const custom={roomLength:['longueur piece','longueur de la piece'],roomWidth:['largeur piece','largeur de la piece'],roomArea:['surface'],parquetType:['type parquet'],layingPattern:['motif de pose','sens de pose'],layingMethod:['mode de pose','pose'],parquetThickness:['epaisseur parquet'],floorHeight:['hauteur a monter','hauteur sol fini'],openingLength:['longueur tremie'],openingWidth:['largeur tremie'],trimmerThickness:['epaisseur lincoir','lincoir'],slabThickness:['epaisseur plancher','epaisseur dalle'],stairWidth:['largeur escalier'],stairShape:['forme escalier','type escalier'],turnDirection:['sens tournant'],stepCount:['nombre marches'],stepHeight:['hauteur marche'],tread:['giron'],headroom:['echappee'],startingSpace:['reculement']};const plain=label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();return custom[key]||[plain]}
+function fillFromFullVoice(d,spoken){
+  const type=d.querySelector('.wtype').value,schema=specificSchemas[type]||[],text=spoken.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/[^a-z0-9,. ]/g,' ').replace(/\s+/g,' ').trim();
+  const common=[['width','largeur',d.querySelector('.ww')],['height','hauteur',d.querySelector('.wh')],['sill','hauteur allege',d.querySelector('.wa')],['depth','epaisseur mur',d.querySelector('.wd')],['qty','quantite',d.querySelector('.wq')],['location','localisation',d.querySelector('.wloc')],['obs','observations',d.querySelector('.wobs')]];
+  const entries=common.map(([key,a,el])=>({key,aliases:[a],el})).concat(schema.map(([key,label])=>({key,aliases:voiceAliases(key,label),el:d.querySelector(`[data-specific="${key}"]`)})));
+  const hits=[];entries.forEach(entry=>entry.aliases.forEach(alias=>{const i=text.indexOf(alias);if(i>=0)hits.push({i,alias,entry})}));hits.sort((a,b)=>a.i-b.i);const unique=hits.filter((h,i)=>!hits.slice(0,i).some(x=>x.entry===h.entry));unique.sort((a,b)=>a.i-b.i);
+  let count=0;unique.forEach((h,i)=>{let value=text.slice(h.i+h.alias.length,unique[i+1]?.i??text.length).replace(/^(est|de|du|a|:| )+/,'').replace(/\b(puis|et ensuite)\b.*$/,'').replace(/[,. ]+$/,'').trim();if(!value)return;const el=h.entry.el;if(el.tagName==='SELECT'){if(setSelectByVoice(el,value))count++}else{if(el.inputMode==='decimal'||el.inputMode==='numeric')value=value.replace(/virgule/g,'.').replace(/\b(millimetres?|mm|metres?|m|centimetres?|cm)\b/g,'').replace(/[^0-9.,]/g,'').trim();if(value){el.value=value;count++}}});
+  if(!count)d.querySelector('.wobs').value=(d.querySelector('.wobs').value+' '+spoken).trim();return count;
+}
+function startFullVoice(d){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur. Utilisez les micros placés à côté de chaque champ.';return}
+  if(recognition)try{recognition.stop()}catch(e){}const btn=d.querySelector('.voice-all');recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;btn.classList.add('listening');$('dictationStatus').textContent='Dictez maintenant toutes les informations de l’ouvrage…';recognition.onresult=e=>{const spoken=e.results[e.results.length-1][0].transcript.trim(),n=fillFromFullVoice(d,spoken);$('dictationStatus').textContent=n?`${n} information(s) répartie(s) dans les champs.`:'Texte ajouté aux observations.'};recognition.onend=()=>btn.classList.remove('listening');recognition.onerror=()=>{$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.';btn.classList.remove('listening')};recognition.start();
+}
+function commandText(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/-/g,' ').replace(/\s+/g,' ').trim()}
+function workAtCommand(text){const cards=[...document.querySelectorAll('.work-card')],m=text.match(/ouvrage\s+(\d+)/);if(m)activeWorkIndex=Math.min(cards.length-1,Math.max(0,Number(m[1])-1));return cards[activeWorkIndex]||cards[cards.length-1]}
+function typeFromCommand(text){const aliases={fenetre:'Fenêtre','porte entree':"Porte d'entrée",'porte d entree':"Porte d'entrée",'porte interieure':'Porte intérieure','porte garage':'Porte de garage','baie coulissante':'Baie coulissante','volet roulant motorise':'Volet roulant motorisé','volet roulant manuel':'Volet roulant manuel','volet bois':'Volet bois',store:'Store',escalier:'Escalier',parquet:'Parquet',placard:'Placard',agencement:'Agencement','garde corps':'Garde-corps / main courante','main courante':'Garde-corps / main courante',bardage:'Bardage',vitrage:'Vitrage'};return Object.entries(aliases).sort((a,b)=>b[0].length-a[0].length).find(([a])=>text.includes(a))?.[1]||''}
+function setSimpleVoiceField(id,text,prefixes){for(const p of prefixes){const i=text.indexOf(p);if(i>=0){const raw=text.slice(i+p.length).replace(/^(est|:|de| )+/,'').trim();if(raw){$(id).value=raw;$(id).dispatchEvent(new Event('input'));return true}}}return false}
+function stopVoiceAssistant(message='Assistant vocal arrêté.'){
+  voiceControlOn=false;if(commandRecognition)try{commandRecognition.stop()}catch(e){}commandRecognition=null;const b=$('voiceAssistant');b.classList.remove('listening');b.textContent='🎙️ Démarrer les commandes vocales';$('voiceFeedback').textContent=message;
+}
+async function openProjectByVoice(name){const projects=await allProjects(),n=normalize(name),p=projects.find(x=>normalize(x.projectTitle).includes(n)||normalize(x.contactName).includes(n));if(!p)return false;loadProject(p);return true}
+async function executeVoiceCommand(spoken){
+  const text=commandText(spoken),feedback=$('voiceFeedback');feedback.textContent=`Commande entendue : « ${spoken} »`;
+  if(/arrete|stop|desactive/.test(text)){stopVoiceAssistant();return}
+  if(/^(enregistre|sauvegarde)|enregistrer le chantier|sauvegarder le chantier/.test(text)){await save();feedback.textContent='✅ Chantier enregistré.';return}
+  if(/nouveau chantier|nouveau releve/.test(text)){if(confirm('Enregistrer le chantier actuel avant d’en créer un nouveau ?'))await save();clearForm();activeWorkIndex=0;feedback.textContent='✅ Nouveau chantier prêt.';return}
+  if(/ouvrir (le )?chantier/.test(text)){const name=text.replace(/^.*ouvrir (le )?chantier/,'').trim();feedback.textContent=await openProjectByVoice(name)?`✅ Chantier « ${name} » ouvert.`:`⚠️ Aucun chantier trouvé pour « ${name} ».`;return}
+  if(/ajoute|ajouter|nouvel ouvrage|nouveau ouvrage/.test(text)){const type=typeFromCommand(text);addWork({type});activeWorkIndex=document.querySelectorAll('.work-card').length-1;feedback.textContent=`✅ Ouvrage ${type||'sans type'} ajouté.`;document.querySelectorAll('.work-card')[activeWorkIndex].scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(/supprime|supprimer/.test(text)&&text.includes('ouvrage')){const cards=[...document.querySelectorAll('.work-card')];if(cards.length===1){feedback.textContent='⚠️ Il faut conserver au moins un ouvrage.';return}let d=text.includes('dernier')?cards[cards.length-1]:workAtCommand(text);if(d&&confirm(`Supprimer l’ouvrage ${cards.indexOf(d)+1} ?`)){d.remove();renumberWorks();activeWorkIndex=Math.min(activeWorkIndex,cards.length-2);feedback.textContent='✅ Ouvrage supprimé.'}return}
+  if(/modifier|selectionne|selectionner|aller a/.test(text)&&text.includes('ouvrage')){const d=workAtCommand(text);if(d){activeWorkIndex=[...document.querySelectorAll('.work-card')].indexOf(d);d.scrollIntoView({behavior:'smooth',block:'start'});feedback.textContent=`✅ Les prochaines modifications concernent l’ouvrage ${activeWorkIndex+1}.`;if(!/(largeur|hauteur|longueur|epaisseur|surface|type|pose|giron|reculement|quantite|localisation|observation)/.test(text))return}}
+  if(setSimpleVoiceField('projectTitle',text,['nom du chantier','titre du chantier'])){feedback.textContent='✅ Nom du chantier renseigné.';return}
+  if(setSimpleVoiceField('contactName',text,['nom du client','client','contact'])){feedback.textContent='✅ Client renseigné.';return}
+  if(setSimpleVoiceField('contactPhone',text,['telephone','numero de telephone'])){feedback.textContent='✅ Téléphone renseigné.';return}
+  if(setSimpleVoiceField('contactEmail',text,['adresse mail','email','mail'])){feedback.textContent='✅ E-mail renseigné.';return}
+  if(setSimpleVoiceField('address',text,['adresse du chantier','adresse'])){feedback.textContent='✅ Adresse renseignée.';return}
+  if(setSimpleVoiceField('notes',text,['notes chantier','note chantier','notes generales'])){feedback.textContent='✅ Notes générales renseignées.';return}
+  if(/creer.*demande.*prix|demande.*fournisseur/.test(text)){$('makeSupplier').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Demande de prix créée.';return}
+  if(/creer.*devis|base.*devis/.test(text)){$('makeQuote').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Base de devis créée.';return}
+  if(/copier.*resume|copier.*texte/.test(text)){$('copySummary').click();feedback.textContent='✅ Résumé copié.';return}
+  const d=workAtCommand(text),type=typeFromCommand(text);if(type&&/type|choisir|mettre|ouvrage/.test(text)){const sel=d.querySelector('.wtype');sel.value=type;sel.dispatchEvent(new Event('change'));feedback.textContent=`✅ Ouvrage ${activeWorkIndex+1} défini comme « ${type} ».`;return}
+  const count=fillFromFullVoice(d,spoken.replace(/^modifier\s+/i,''));if(count){feedback.textContent=`✅ ${count} information(s) modifiée(s) dans l’ouvrage ${activeWorkIndex+1}.`;d.scrollIntoView({behavior:'smooth',block:'center'});return}
+  d.querySelector('.wobs').value=(d.querySelector('.wobs').value+' '+spoken).trim();feedback.textContent=`ℹ️ Commande non identifiée : le texte a été ajouté aux observations de l’ouvrage ${activeWorkIndex+1}.`;
+}
+function startVoiceAssistant(){
+  if(voiceControlOn){stopVoiceAssistant();return}if(recognition)try{recognition.stop()}catch(e){}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('voiceFeedback').textContent='La reconnaissance vocale n’est pas disponible dans ce navigateur. Utilisez Chrome ou Safari récent et autorisez le microphone.';return}
+  voiceControlOn=true;const btn=$('voiceAssistant');btn.classList.add('listening');btn.textContent='⏹️ Arrêter les commandes vocales';
+  const listen=()=>{if(!voiceControlOn)return;commandRecognition=new SR();commandRecognition.lang='fr-FR';commandRecognition.continuous=false;commandRecognition.interimResults=false;commandRecognition.onstart=()=>{$('voiceFeedback').textContent='🎙️ Je vous écoute…'};commandRecognition.onresult=e=>executeVoiceCommand(e.results[e.results.length-1][0].transcript.trim());commandRecognition.onerror=e=>{if(e.error!=='no-speech')$('voiceFeedback').textContent='La commande n’a pas été comprise. Vous pouvez recommencer.'};commandRecognition.onend=()=>{commandRecognition=null;if(voiceControlOn)setTimeout(listen,500)};try{commandRecognition.start()}catch(e){stopVoiceAssistant('Impossible de démarrer le microphone. Vérifiez son autorisation.')}};listen();
+}
+function bindMics(root=document){root.querySelectorAll('.mic').forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.onclick=()=>{const t=resolveMicTarget(btn.dataset.target);if(t)startVoice(t,btn)}})}
+$('addWork').onclick=()=>addWork();
+$('photos').onchange=async e=>{for(const f of e.target.files){photoData.push(await fileToDataURL(f))}renderPhotos()};
+function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid');if(!g)return;g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.alt='Photo ouvrage';img.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d)}};wrap.appendChild(img);g.appendChild(wrap)})}
+function renderPhotos(){const g=$('photoGrid');g.innerHTML='';photoData.forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.onclick=()=>{if(confirm('Supprimer cette photo ?')){photoData.splice(i,1);renderPhotos()}};wrap.appendChild(img);g.appendChild(wrap)})}
+function baseLines(){let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);workData().forEach((w,i)=>{lines.push('',`Ouvrage ${i+1} : ${shown(w.type,w.other)||'-'}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[w.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);if(w.sketch)lines.push('Croquis associé : oui')});if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines}
+$('makeSupplier').onclick=()=>{let l=['Bonjour,','','Pouvez-vous me transmettre votre meilleure offre de prix pour le besoin suivant :','',...baseLines()];if($('supplier').value)l.push(`Fournisseur / fabricant envisagé : ${$('supplier').value}`);if($('hardwareRef').value)l.push(`Référence / gamme : ${$('hardwareRef').value}`);if($('hardwareNeed').value)l.push(`Quincaillerie / besoin spécifique : ${$('hardwareNeed').value}`);l.push('','Merci d\'indiquer le prix, le délai et les éventuelles contraintes techniques.','','Cordialement.');$('summary').value=l.join('\n')};
+$('makeQuote').onclick=()=>{$('summary').value=['Fourniture et pose des ouvrages suivants :','',...baseLines(),'','Prestations à prévoir :','- Prise de cotes et vérification sur site','- Fourniture des ouvrages selon caractéristiques ci-dessus','- Pose, réglages et finitions','- Évacuation et traitement des déchets si dépose de l\'existant','','À compléter après retour fournisseur : prix d\'achat, temps de pose, accessoires, finitions et marge.'].join('\n')};
+$('copySummary').onclick=async()=>{await navigator.clipboard.writeText($('summary').value);alert('Texte copié.')};
+$('shareSummary').onclick=async()=>{const text=$('summary').value;if(navigator.share)await navigator.share({title:$('projectTitle').value||'Relevé chantier',text});else{await navigator.clipboard.writeText(text);alert('Partage non disponible : texte copié.')}};
+$('searchWeb').onclick=()=>{const first=workData()[0]||{};const q=[shown(first.type,first.other),$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
+function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('releveChantierDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function save(){const db=await dbOpen();const data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,works:workData()};fields.forEach(f=>data[f]=$(f).value);currentId=data.id;const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=()=>{renderProjects();alert('Projet enregistré sur cet appareil.')}}
+async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
+async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const type=x.works?.[0]?.type||x.workType||'';d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} ${type?'• '+esc(type):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
+function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.measures?.length){const m=x.measures?.[0]||{};return[{type:x.workType||'',other:x.workOther||'',material:x.material||'',materialOther:x.materialOther||'',install:x.installType||'',installOther:x.installOther||'',width:m.w||'',height:m.h||'',extra:(x.measures||[]).slice(1).map(a=>`${a.label||'Dimension'} : ${a.w||''}${a.h?' x '+a.h:''} ${a.u||'mm'}`).join('\n')}]}return[{}]}
+function loadProject(x){currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];$('works').innerHTML='';legacyToWorks(x).forEach(addWork);renderPhotos();scrollTo({top:0,behavior:'smooth'})}
+function clearForm(){currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();$('works').innerHTML='';addWork();$('summary').value=''}
+$('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+$('projectDate').value=new Date().toISOString().slice(0,10);bindMics();addWork();renderProjects();
+</script>
+</body></html>
