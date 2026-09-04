@@ -280,7 +280,11 @@ function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.mea
 function loadProject(x){currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];$('works').innerHTML='';legacyToWorks(x).forEach(addWork);renderPhotos();scrollTo({top:0,behavior:'smooth'})}
 function clearForm(){currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();$('works').innerHTML='';addWork();$('summary').value=''}
 $('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;location.reload()}});
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+}
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();addWork();renderProjects();
 </script>
 </body></html>
