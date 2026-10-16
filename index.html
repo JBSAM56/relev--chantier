@@ -18,6 +18,7 @@
     main{max-width:900px;margin:auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
     .card,.work-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .work-card{border:2px solid #e5e7eb}.work-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.work-head h3{margin:0;font-size:16px}
+    .page-toolbar{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:12px}.page-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:thin}.page-tab{flex:0 0 auto;background:#fff;border:1px solid var(--line);padding:9px 12px}.page-tab.active{background:var(--pri);color:#fff;border-color:var(--pri)}.page-meta{padding:12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;margin-bottom:12px}.page-meta .grid{align-items:end}.page-actions{display:flex;gap:8px;margin-top:10px}.page-actions button{flex:1}
     h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
     label{display:block;font-size:13px;font-weight:600;margin:0 0 5px}input,select,textarea,button{font:inherit}
     input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff}textarea{min-height:96px;resize:vertical}
@@ -28,7 +29,7 @@
     .specific-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px}.specific-title{grid-column:1/-1;font-weight:800;color:#334155}.voice-all{grid-column:1/-1;background:#dbeafe;color:#1e3a8a}.voice-help{grid-column:1/-1;font-size:12px;color:#475569}.sketch-wrap{grid-column:1/-1}.sketch-canvas{display:block;width:100%;height:340px;touch-action:none;background:#fff;border:1px solid #94a3b8;border-radius:10px}.sketch-tools{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.sketch-tools button{flex:1;min-width:100px}.tool-active{outline:3px solid #2563eb}.section-label{grid-column:1/-1;margin:4px 0 0;color:#334155}
     .voice-panel{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #93c5fd}.voice-main{width:100%;font-size:17px;background:#1d4ed8;color:#fff}.voice-main.listening{background:#b91c1c;outline:4px solid #fecaca}.voice-feedback{margin-top:10px;padding:10px;background:#fff;border:1px solid #bfdbfe;border-radius:10px;min-height:43px}.command-list{font-size:12px;color:#475569;line-height:1.55;margin-top:9px}
     .footerbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:6}.footerbar button{flex:1}
-    @media(max-width:640px){.grid,.specific-fields{grid-template-columns:1fr}.photo-grid{grid-template-columns:repeat(2,1fr)}.work-head{align-items:flex-start}.work-head .danger{flex:0 0 auto}.sketch-canvas{height:300px}}
+    @media(max-width:640px){.grid,.specific-fields{grid-template-columns:1fr}.photo-grid{grid-template-columns:repeat(2,1fr)}.work-head{align-items:flex-start}.work-head .danger{flex:0 0 auto}.sketch-canvas{height:300px}.page-toolbar{grid-template-columns:1fr}.page-toolbar>button{width:100%}}
   </style>
 </head>
 <body>
@@ -51,7 +52,7 @@
     <button class="voice-main" id="voiceAssistant" type="button">🎙️ Démarrer les commandes vocales</button>
     <div class="voice-feedback" id="voiceFeedback">Appuyez sur le bouton, puis parlez naturellement.</div>
     <details><summary class="hint" style="cursor:pointer;margin-top:9px">Voir des exemples de commandes</summary><div class="command-list">
-      « Enregistrer le chantier » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
+      « Enregistrer le chantier » • « Nouvelle page parquet » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
       « Longueur pièce 5 mètres, largeur pièce 4 mètres, type parquet contrecollé » • « Hauteur à monter 2 800 millimètres, largeur trémie 900 »<br>
       « Nom du chantier Madame Martin » • « Client Monsieur Dupont » • « Adresse 10 rue… » • « Notes chantier accès difficile »<br>
       « Créer la demande de prix » • « Créer le devis » • « Ouvrir le chantier Dupont » • « Nouveau chantier » • « Arrêter l’assistant »
@@ -59,10 +60,18 @@
   </section>
 
   <section class="card">
-    <h2>Ouvrages et dimensions</h2>
+    <h2>Pages d'ouvrages</h2>
+    <div class="page-toolbar"><div><label>Pages du chantier</label><div id="pageTabs" class="page-tabs"></div></div><button class="primary" id="addPage" type="button">+ Nouvelle page</button></div>
+    <div class="page-meta">
+      <div class="grid">
+        <div><label>Type d'ouvrage de cette page</label><select id="pageType"></select></div>
+        <div id="pageOtherWrap" class="hidden"><label>Autre type</label><input id="pageOther" placeholder="Préciser le type d'ouvrage"></div>
+      </div>
+      <div class="page-actions"><button class="danger" id="removePage" type="button">Supprimer cette page</button></div>
+    </div>
     <div id="works"></div>
-    <button class="secondary" id="addWork" type="button">+ Ajouter un ouvrage</button>
-    <div class="hint">Chaque ouvrage possède son propre type, matériau, pose, dimensions, allège, quantité et observations.</div>
+    <button class="secondary" id="addWork" type="button">+ Ajouter un ouvrage de même nature</button>
+    <div class="hint">Une page regroupe plusieurs ouvrages du même type. Créez une nouvelle page pour changer de nature d'ouvrage.</div>
   </section>
 
   <section class="card">
@@ -100,7 +109,7 @@
 <div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
 <script>
 const $=id=>document.getElementById(id);
-let photoData=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0;
+let photoData=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false;
 const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
 const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
@@ -136,15 +145,40 @@ const specificSchemas={
   'Bardage':[['surface','Surface','m²','decimal'],['boardProfile','Profil / dimensions des lames','Description','text'],['support','Support / ossature','Description','text'],['insulation','Isolation / pare-pluie / ventilation','Description','text'],['finish','Essence / finition / coloris','Description','text']],
   'Vitrage':[['glassClearSize','Clair de vitrage','mm','text'],['glassMakeup','Composition du vitrage','Description','text'],['glassThickness','Épaisseur totale','mm','decimal'],['rebate','Feuillure / parcloses / calage','Description','text'],['access','Accès et moyen de levage','Description','text']]
 };
-const opt=(arr,val='')=>arr.map(x=>`<option ${x===val?'selected':''}>${x||'Choisir…'}</option>`).join('');
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const opt=(arr,val='')=>arr.map(x=>`<option value="${esc(x)}" ${x===val?'selected':''}>${x||'Choisir…'}</option>`).join('');
 function micButton(target){return `<button class="mic" type="button" data-target="${target}">🎙️</button>`}
+function pageLabel(page,index){return `${index+1}. ${shown(page.type,page.other)||'Type à choisir'} (${page.works?.length||1})`}
+function captureActivePage(){
+  if(renderingPage||!pages.length||!pages[activePageIndex])return;
+  const page=pages[activePageIndex];page.type=$('pageType').value;page.other=$('pageOther').value;
+  page.works=workData().map(w=>({...w,type:page.type,other:page.other}));
+}
+function renderPageTabs(){
+  const box=$('pageTabs');box.innerHTML='';pages.forEach((page,index)=>{const b=document.createElement('button');b.type='button';b.className='page-tab'+(index===activePageIndex?' active':'');b.textContent=pageLabel(page,index);b.onclick=()=>showPage(index);box.appendChild(b)});
+  $('removePage').disabled=pages.length===1;
+}
+function showPage(index,capture=true){
+  if(capture)captureActivePage();activePageIndex=Math.max(0,Math.min(index,pages.length-1));const page=pages[activePageIndex];renderingPage=true;
+  $('pageType').value=page.type||'';$('pageOther').value=page.other||'';$('pageOtherWrap').classList.toggle('hidden',page.type!=='Autre');$('works').innerHTML='';
+  (page.works?.length?page.works:[{}]).forEach(w=>addWork({...w,type:page.type||w.type||'',other:page.other||w.other||''}));renderingPage=false;activeWorkIndex=0;renderPageTabs();
+}
+function createPage(type='',other=''){
+  captureActivePage();pages.push({id:Date.now()+Math.random(),type,other,works:[{type,other,qty:1}]});showPage(pages.length-1,false);
+}
+function ensurePageForType(type){
+  captureActivePage();let index=pages.findIndex(p=>p.type===type);if(index<0){pages.push({id:Date.now()+Math.random(),type,other:'',works:[{type,qty:1}]});index=pages.length-1}showPage(index,false);
+}
+function normalizePages(project){
+  if(Array.isArray(project.pages)&&project.pages.length)return project.pages.map((p,i)=>({id:p.id||Date.now()+i,type:p.type||'',other:p.other||'',works:Array.isArray(p.works)&&p.works.length?p.works:[{type:p.type||'',other:p.other||'',qty:1}]}));
+  const grouped=[];legacyToWorks(project).forEach(work=>{let page=grouped.find(p=>p.type===(work.type||'')&&p.other===(work.other||''));if(!page){page={id:Date.now()+grouped.length,type:work.type||'',other:work.other||'',works:[]};grouped.push(page)}page.works.push(work)});return grouped.length?grouped:[{id:Date.now(),type:'',other:'',works:[{}]}];
+}
 function addWork(w={}){
+  const page=pages[activePageIndex]||{},type=page.type||w.type||'',other=page.other||w.other||'';w={...w,type,other};
   const id='w'+(++workCounter),d=document.createElement('div');d.className='work-card';d.dataset.id=id;d._photos=Array.isArray(w.photos)?[...w.photos]:[];d._specific=w.specific||{};d._sketch=w.sketch||'';
   d.innerHTML=`<div class="work-head"><h3>Ouvrage <span class="work-number"></span></h3><button class="danger remove-work" type="button">Supprimer</button></div>
   <div class="grid">
-    <div><label>Type d'ouvrage</label><div class="field-with-mic"><select class="wtype">${opt(workTypes,w.type)}</select>${micButton(id+'-type')}</div></div>
-    <div class="wother-wrap ${w.type==='Autre'?'':'hidden'}"><label>Autre type</label><div class="field-with-mic"><input class="wother" value="${esc(w.other)}" placeholder="Préciser l'ouvrage">${micButton(id+'-other')}</div></div>
+    <select class="wtype hidden" aria-hidden="true">${opt(workTypes,w.type)}</select><input class="wother hidden" value="${esc(w.other)}" aria-hidden="true">
     <div class="specific-fields hidden"></div>
     <div><label>Matériau</label><div class="field-with-mic"><select class="wmaterial">${opt(materials,w.material)}</select>${micButton(id+'-material')}</div></div>
     <div class="mother-wrap ${w.material==='Autre'?'':'hidden'}"><label>Autre matériau</label><div class="field-with-mic"><input class="mother" value="${esc(w.materialOther)}" placeholder="Préciser">${micButton(id+'-materialOther')}</div></div>
@@ -163,8 +197,7 @@ function addWork(w={}){
     <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-tools"><button class="ghost pen tool-active" type="button">✏️ Crayon</button><button class="ghost eraser" type="button">◻️ Gomme</button><button class="ghost add-text" type="button">T Ajouter une cote / note</button><button class="danger clear-sketch" type="button">Effacer le croquis</button></div><canvas class="sketch-canvas"></canvas><div class="hint">Dessinez directement avec le doigt ou un stylet. Le croquis est enregistré avec cet ouvrage.</div></div>
     <div class="full"><label>Photos de cet ouvrage</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Prendre une ou plusieurs photos liées uniquement à cet ouvrage.</div><div class="photo-grid wphoto-grid"></div></div>
   </div>`;
-  d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks()};
-  d.querySelector('.wtype').onchange=e=>{d.querySelector('.wother-wrap').classList.toggle('hidden',e.target.value!=='Autre');renderSpecific(d,e.target.value)};
+  d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs()};
   d.querySelector('.wmaterial').onchange=e=>d.querySelector('.mother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
   d.querySelector('.winstall').onchange=e=>d.querySelector('.iother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
   d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d)};
@@ -239,8 +272,9 @@ async function executeVoiceCommand(spoken){
   if(/^(enregistre|sauvegarde)|enregistrer le chantier|sauvegarder le chantier/.test(text)){await save();feedback.textContent='✅ Chantier enregistré.';return}
   if(/nouveau chantier|nouveau releve/.test(text)){if(confirm('Enregistrer le chantier actuel avant d’en créer un nouveau ?'))await save();clearForm();activeWorkIndex=0;feedback.textContent='✅ Nouveau chantier prêt.';return}
   if(/ouvrir (le )?chantier/.test(text)){const name=text.replace(/^.*ouvrir (le )?chantier/,'').trim();feedback.textContent=await openProjectByVoice(name)?`✅ Chantier « ${name} » ouvert.`:`⚠️ Aucun chantier trouvé pour « ${name} ».`;return}
-  if(/ajoute|ajouter|nouvel ouvrage|nouveau ouvrage/.test(text)){const type=typeFromCommand(text);addWork({type});activeWorkIndex=document.querySelectorAll('.work-card').length-1;feedback.textContent=`✅ Ouvrage ${type||'sans type'} ajouté.`;document.querySelectorAll('.work-card')[activeWorkIndex].scrollIntoView({behavior:'smooth',block:'start'});return}
-  if(/supprime|supprimer/.test(text)&&text.includes('ouvrage')){const cards=[...document.querySelectorAll('.work-card')];if(cards.length===1){feedback.textContent='⚠️ Il faut conserver au moins un ouvrage.';return}let d=text.includes('dernier')?cards[cards.length-1]:workAtCommand(text);if(d&&confirm(`Supprimer l’ouvrage ${cards.indexOf(d)+1} ?`)){d.remove();renumberWorks();activeWorkIndex=Math.min(activeWorkIndex,cards.length-2);feedback.textContent='✅ Ouvrage supprimé.'}return}
+  if(/nouvelle page|nouveau type/.test(text)){const type=typeFromCommand(text);createPage(type);feedback.textContent=`✅ Nouvelle page ${type||'sans type'} créée.`;return}
+  if(/ajoute|ajouter|nouvel ouvrage|nouveau ouvrage/.test(text)){const type=typeFromCommand(text);if(type&&pages[activePageIndex]?.type!==type)ensurePageForType(type);addWork({type:pages[activePageIndex]?.type||type});captureActivePage();renderPageTabs();activeWorkIndex=document.querySelectorAll('.work-card').length-1;feedback.textContent=`✅ Ouvrage ${pages[activePageIndex]?.type||'sans type'} ajouté sur la page ${activePageIndex+1}.`;document.querySelectorAll('.work-card')[activeWorkIndex].scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(/supprime|supprimer/.test(text)&&text.includes('ouvrage')){const cards=[...document.querySelectorAll('.work-card')];if(cards.length===1){feedback.textContent='⚠️ Il faut conserver au moins un ouvrage.';return}let d=text.includes('dernier')?cards[cards.length-1]:workAtCommand(text);if(d&&confirm(`Supprimer l’ouvrage ${cards.indexOf(d)+1} ?`)){d.remove();renumberWorks();captureActivePage();renderPageTabs();activeWorkIndex=Math.min(activeWorkIndex,cards.length-2);feedback.textContent='✅ Ouvrage supprimé.'}return}
   if(/modifier|selectionne|selectionner|aller a/.test(text)&&text.includes('ouvrage')){const d=workAtCommand(text);if(d){activeWorkIndex=[...document.querySelectorAll('.work-card')].indexOf(d);d.scrollIntoView({behavior:'smooth',block:'start'});feedback.textContent=`✅ Les prochaines modifications concernent l’ouvrage ${activeWorkIndex+1}.`;if(!/(largeur|hauteur|longueur|epaisseur|surface|type|pose|giron|reculement|quantite|localisation|observation)/.test(text))return}}
   if(setSimpleVoiceField('projectTitle',text,['nom du chantier','titre du chantier'])){feedback.textContent='✅ Nom du chantier renseigné.';return}
   if(setSimpleVoiceField('contactName',text,['nom du client','client','contact'])){feedback.textContent='✅ Client renseigné.';return}
@@ -251,7 +285,7 @@ async function executeVoiceCommand(spoken){
   if(/creer.*demande.*prix|demande.*fournisseur/.test(text)){$('makeSupplier').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Demande de prix créée.';return}
   if(/creer.*devis|base.*devis/.test(text)){$('makeQuote').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Base de devis créée.';return}
   if(/copier.*resume|copier.*texte/.test(text)){$('copySummary').click();feedback.textContent='✅ Résumé copié.';return}
-  const d=workAtCommand(text),type=typeFromCommand(text);if(type&&/type|choisir|mettre|ouvrage/.test(text)){const sel=d.querySelector('.wtype');sel.value=type;sel.dispatchEvent(new Event('change'));feedback.textContent=`✅ Ouvrage ${activeWorkIndex+1} défini comme « ${type} ».`;return}
+  const d=workAtCommand(text),type=typeFromCommand(text);if(type&&/type|choisir|mettre|ouvrage/.test(text)){ensurePageForType(type);feedback.textContent=`✅ Page « ${type} » ouverte.`;return}
   const count=fillFromFullVoice(d,spoken.replace(/^modifier\s+/i,''));if(count){feedback.textContent=`✅ ${count} information(s) modifiée(s) dans l’ouvrage ${activeWorkIndex+1}.`;d.scrollIntoView({behavior:'smooth',block:'center'});return}
   d.querySelector('.wobs').value=(d.querySelector('.wobs').value+' '+spoken).trim();feedback.textContent=`ℹ️ Commande non identifiée : le texte a été ajouté aux observations de l’ouvrage ${activeWorkIndex+1}.`;
 }
@@ -261,30 +295,40 @@ function startVoiceAssistant(){
   const listen=()=>{if(!voiceControlOn)return;commandRecognition=new SR();commandRecognition.lang='fr-FR';commandRecognition.continuous=false;commandRecognition.interimResults=false;commandRecognition.onstart=()=>{$('voiceFeedback').textContent='🎙️ Je vous écoute…'};commandRecognition.onresult=e=>executeVoiceCommand(e.results[e.results.length-1][0].transcript.trim());commandRecognition.onerror=e=>{if(e.error!=='no-speech')$('voiceFeedback').textContent='La commande n’a pas été comprise. Vous pouvez recommencer.'};commandRecognition.onend=()=>{commandRecognition=null;if(voiceControlOn)setTimeout(listen,500)};try{commandRecognition.start()}catch(e){stopVoiceAssistant('Impossible de démarrer le microphone. Vérifiez son autorisation.')}};listen();
 }
 function bindMics(root=document){root.querySelectorAll('.mic').forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.onclick=()=>{const t=resolveMicTarget(btn.dataset.target);if(t)startVoice(t,btn)}})}
-$('addWork').onclick=()=>addWork();
+$('pageType').innerHTML=opt(workTypes);
+$('pageType').onchange=e=>{const page=pages[activePageIndex];if(!page)return;page.type=e.target.value;page.other=e.target.value==='Autre'?$('pageOther').value:'';$('pageOtherWrap').classList.toggle('hidden',e.target.value!=='Autre');document.querySelectorAll('.work-card').forEach(d=>{d.querySelector('.wtype').value=page.type;d.querySelector('.wother').value=page.other;renderSpecific(d,page.type)});captureActivePage();renderPageTabs()};
+$('pageOther').oninput=e=>{const page=pages[activePageIndex];if(!page)return;page.other=e.target.value;document.querySelectorAll('.wother').forEach(el=>el.value=page.other);captureActivePage();renderPageTabs()};
+$('addPage').onclick=()=>createPage();
+$('removePage').onclick=()=>{if(pages.length===1)return;if(confirm('Supprimer cette page et tous ses ouvrages ?')){pages.splice(activePageIndex,1);showPage(Math.min(activePageIndex,pages.length-1),false)}};
+$('addWork').onclick=()=>{addWork({type:pages[activePageIndex]?.type||'',other:pages[activePageIndex]?.other||''});captureActivePage();renderPageTabs()};
 $('photos').onchange=async e=>{for(const f of e.target.files){photoData.push(await fileToDataURL(f))}renderPhotos()};
 function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
 function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid');if(!g)return;g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.alt='Photo ouvrage';img.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d)}};wrap.appendChild(img);g.appendChild(wrap)})}
 function renderPhotos(){const g=$('photoGrid');g.innerHTML='';photoData.forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.onclick=()=>{if(confirm('Supprimer cette photo ?')){photoData.splice(i,1);renderPhotos()}};wrap.appendChild(img);g.appendChild(wrap)})}
-function baseLines(){let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);workData().forEach((w,i)=>{lines.push('',`Ouvrage ${i+1} : ${shown(w.type,w.other)||'-'}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[w.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);if(w.sketch)lines.push('Croquis associé : oui')});if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines}
+function projectPagesData(){captureActivePage();return pages.map(page=>({...page,works:(page.works||[]).map(w=>({...w,type:page.type,other:page.other}))}))}
+function baseLines(){
+  let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);
+  projectPagesData().forEach((page,pageIndex)=>{lines.push('',`PAGE ${pageIndex+1} — ${shown(page.type,page.other)||'Type non renseigné'}`);page.works.forEach((w,i)=>{lines.push(`Ouvrage ${i+1}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[page.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);if(w.sketch)lines.push('Croquis associé : oui')})});
+  if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines;
+}
 $('makeSupplier').onclick=()=>{let l=['Bonjour,','','Pouvez-vous me transmettre votre meilleure offre de prix pour le besoin suivant :','',...baseLines()];if($('supplier').value)l.push(`Fournisseur / fabricant envisagé : ${$('supplier').value}`);if($('hardwareRef').value)l.push(`Référence / gamme : ${$('hardwareRef').value}`);if($('hardwareNeed').value)l.push(`Quincaillerie / besoin spécifique : ${$('hardwareNeed').value}`);l.push('','Merci d\'indiquer le prix, le délai et les éventuelles contraintes techniques.','','Cordialement.');$('summary').value=l.join('\n')};
 $('makeQuote').onclick=()=>{$('summary').value=['Fourniture et pose des ouvrages suivants :','',...baseLines(),'','Prestations à prévoir :','- Prise de cotes et vérification sur site','- Fourniture des ouvrages selon caractéristiques ci-dessus','- Pose, réglages et finitions','- Évacuation et traitement des déchets si dépose de l\'existant','','À compléter après retour fournisseur : prix d\'achat, temps de pose, accessoires, finitions et marge.'].join('\n')};
 $('copySummary').onclick=async()=>{await navigator.clipboard.writeText($('summary').value);alert('Texte copié.')};
 $('shareSummary').onclick=async()=>{const text=$('summary').value;if(navigator.share)await navigator.share({title:$('projectTitle').value||'Relevé chantier',text});else{await navigator.clipboard.writeText(text);alert('Partage non disponible : texte copié.')}};
-$('searchWeb').onclick=()=>{const first=workData()[0]||{};const q=[shown(first.type,first.other),$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
+$('searchWeb').onclick=()=>{captureActivePage();const page=pages[activePageIndex]||{},first=page.works?.[0]||{};const q=[shown(page.type,page.other),first.material,$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
 function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('releveChantierDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function save(){const db=await dbOpen();const data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,works:workData()};fields.forEach(f=>data[f]=$(f).value);currentId=data.id;const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=()=>{renderProjects();alert('Projet enregistré sur cet appareil.')}}
+async function save(){const db=await dbOpen(),savedPages=projectPagesData();const data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,pages:savedPages,works:savedPages.flatMap(p=>p.works)};fields.forEach(f=>data[f]=$(f).value);currentId=data.id;const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=()=>{renderProjects();alert('Chantier et pages enregistrés sur cet appareil.')}}
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
-async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const type=x.works?.[0]?.type||x.workType||'';d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} ${type?'• '+esc(type):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
+async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
 function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.measures?.length){const m=x.measures?.[0]||{};return[{type:x.workType||'',other:x.workOther||'',material:x.material||'',materialOther:x.materialOther||'',install:x.installType||'',installOther:x.installOther||'',width:m.w||'',height:m.h||'',extra:(x.measures||[]).slice(1).map(a=>`${a.label||'Dimension'} : ${a.w||''}${a.h?' x '+a.h:''} ${a.u||'mm'}`).join('\n')}]}return[{}]}
-function loadProject(x){currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];$('works').innerHTML='';legacyToWorks(x).forEach(addWork);renderPhotos();scrollTo({top:0,behavior:'smooth'})}
-function clearForm(){currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();$('works').innerHTML='';addWork();$('summary').value=''}
+function loadProject(x){currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();scrollTo({top:0,behavior:'smooth'})}
+function clearForm(){currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value=''}
 $('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
 if('serviceWorker' in navigator){
   let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;location.reload()}});
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 }
-$('projectDate').value=new Date().toISOString().slice(0,10);bindMics();addWork();renderProjects();
+$('projectDate').value=new Date().toISOString().slice(0,10);bindMics();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
 </script>
 </body></html>
