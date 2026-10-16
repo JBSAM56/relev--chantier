@@ -109,7 +109,7 @@
 <div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
 <script>
 const $=id=>document.getElementById(id);
-let photoData=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false;
+let photoData=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false;
 const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
 const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
@@ -164,7 +164,7 @@ function showPage(index,capture=true){
   (page.works?.length?page.works:[{}]).forEach(w=>addWork({...w,type:page.type||w.type||'',other:page.other||w.other||''}));renderingPage=false;activeWorkIndex=0;renderPageTabs();
 }
 function createPage(type='',other=''){
-  captureActivePage();pages.push({id:Date.now()+Math.random(),type,other,works:[{type,other,qty:1}]});showPage(pages.length-1,false);
+  captureActivePage();pages.push({id:Date.now()+Math.random(),type,other,works:[{type,other,qty:1}]});showPage(pages.length-1,false);scheduleAutosave();
 }
 function ensurePageForType(type){
   captureActivePage();let index=pages.findIndex(p=>p.type===type);if(index<0){pages.push({id:Date.now()+Math.random(),type,other:'',works:[{type,qty:1}]});index=pages.length-1}showPage(index,false);
@@ -197,10 +197,10 @@ function addWork(w={}){
     <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-tools"><button class="ghost pen tool-active" type="button">✏️ Crayon</button><button class="ghost eraser" type="button">◻️ Gomme</button><button class="ghost add-text" type="button">T Ajouter une cote / note</button><button class="danger clear-sketch" type="button">Effacer le croquis</button></div><canvas class="sketch-canvas"></canvas><div class="hint">Dessinez directement avec le doigt ou un stylet. Le croquis est enregistré avec cet ouvrage.</div></div>
     <div class="full"><label>Photos de cet ouvrage</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Prendre une ou plusieurs photos liées uniquement à cet ouvrage.</div><div class="photo-grid wphoto-grid"></div></div>
   </div>`;
-  d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs()};
+  d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave()};
   d.querySelector('.wmaterial').onchange=e=>d.querySelector('.mother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
   d.querySelector('.winstall').onchange=e=>d.querySelector('.iother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
-  d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d)};
+  d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d);scheduleAutosave()};
   d.querySelector('.voice-all').onclick=()=>startFullVoice(d);
   $('works').appendChild(d);renumberWorks();renderSpecific(d,w.type||'');bindMics(d);renderWorkPhotos(d);initSketch(d);
 }
@@ -221,13 +221,13 @@ function initSketch(d){
   const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d');let drawing=false,last=null,mode='pen',noteLine=0;
   function size(){const saved=d._sketch,w=Math.max(280,c.clientWidth),h=c.clientHeight,ratio=Math.max(1,window.devicePixelRatio||1);c.width=w*ratio;c.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineCap='round';ctx.lineJoin='round';ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);if(saved){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,w,h);im.src=saved}}
   function point(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.clientWidth/r.width,y:(e.clientY-r.top)*c.clientHeight/r.height}}
-  function saveSketch(){d._sketch=c.toDataURL('image/png')}
+  function saveSketch(){d._sketch=c.toDataURL('image/png');scheduleAutosave()}
   c.onpointerdown=e=>{drawing=true;last=point(e);c.setPointerCapture(e.pointerId);e.preventDefault()};
   c.onpointermove=e=>{if(!drawing)return;const p=point(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.strokeStyle=mode==='eraser'?'#fff':'#111827';ctx.lineWidth=mode==='eraser'?24:3;ctx.stroke();last=p;e.preventDefault()};
   c.onpointerup=c.onpointercancel=e=>{if(drawing){drawing=false;saveSketch()}e.preventDefault()};
   d.querySelector('.pen').onclick=()=>{mode='pen';d.querySelector('.pen').classList.add('tool-active');d.querySelector('.eraser').classList.remove('tool-active')};
   d.querySelector('.eraser').onclick=()=>{mode='eraser';d.querySelector('.eraser').classList.add('tool-active');d.querySelector('.pen').classList.remove('tool-active')};
-  d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){d._sketch='';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.clientWidth,c.clientHeight)}};
+  d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){d._sketch='';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.clientWidth,c.clientHeight);scheduleAutosave()}};
   d.querySelector('.add-text').onclick=()=>{const t=prompt('Saisir la cote ou la note à ajouter au croquis :');if(!t)return;ctx.fillStyle='#111827';ctx.font='bold 18px sans-serif';ctx.fillText(t,12,28+(noteLine++%12)*24);saveSketch()};
   requestAnimationFrame(size);
 }
@@ -235,7 +235,7 @@ function workData(){return [...document.querySelectorAll('.work-card')].map(d=>(
   type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:d.querySelector('.wobs').value,specific:specificData(d),sketch:d._sketch||'',photos:Array.isArray(d._photos)?d._photos:[]}))}
 function shown(v,other){return v==='Autre'?(other||'Autre'):v}
 function normalize(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
-function setSelectByVoice(sel,text){const n=normalize(text);let best=[...sel.options].find(o=>normalize(o.textContent)===n)||[...sel.options].find(o=>normalize(o.textContent).includes(n)||n.includes(normalize(o.textContent)));if(best){sel.value=best.value;sel.dispatchEvent(new Event('change'));return true}return false}
+function setSelectByVoice(sel,text){const n=normalize(text);let best=[...sel.options].find(o=>normalize(o.textContent)===n)||[...sel.options].find(o=>normalize(o.textContent).includes(n)||n.includes(normalize(o.textContent)));if(best){sel.value=best.value;sel.dispatchEvent(new Event('change',{bubbles:true}));return true}return false}
 function resolveMicTarget(key){
   if(!key.includes('-'))return $(key);
   const cut=key.indexOf('-'),id=key.slice(0,cut),field=key.slice(cut+1);const d=document.querySelector(`.work-card[data-id="${id}"]`);if(!d)return null;
@@ -246,7 +246,7 @@ function startVoice(target,btn){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur.';return}
   if(recognition)try{recognition.stop()}catch(e){}
   recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;activeMic=btn;btn.classList.add('listening');$('dictationStatus').textContent='Écoute en cours…';
-  recognition.onresult=e=>{const text=e.results[e.results.length-1][0].transcript.trim();if(target.tagName==='SELECT'){if(!setSelectByVoice(target,text)){$('dictationStatus').textContent='Choix non reconnu : '+text}}else{const numeric=target.inputMode==='decimal'||target.inputMode==='numeric';const clean=numeric?text.replace(/\s/g,'').replace(/virgule/i,'.').replace(/[^0-9.,]/g,''):text;target.value=target.value&&target.tagName==='TEXTAREA'?target.value+' '+clean:clean;target.dispatchEvent(new Event('input'));}};
+  recognition.onresult=e=>{const text=e.results[e.results.length-1][0].transcript.trim();if(target.tagName==='SELECT'){if(!setSelectByVoice(target,text)){$('dictationStatus').textContent='Choix non reconnu : '+text}}else{const numeric=target.inputMode==='decimal'||target.inputMode==='numeric';const clean=numeric?text.replace(/\s/g,'').replace(/virgule/i,'.').replace(/[^0-9.,]/g,''):text;target.value=target.value&&target.tagName==='TEXTAREA'?target.value+' '+clean:clean;target.dispatchEvent(new Event('input',{bubbles:true}));}};
   recognition.onend=()=>{if(activeMic)activeMic.classList.remove('listening');activeMic=null;$('dictationStatus').textContent='Dictée terminée.'};recognition.onerror=()=>{$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.'};recognition.start();
 }
 function voiceAliases(key,label){const custom={roomLength:['longueur piece','longueur de la piece'],roomWidth:['largeur piece','largeur de la piece'],roomArea:['surface'],parquetType:['type parquet'],layingPattern:['motif de pose','sens de pose'],layingMethod:['mode de pose','pose'],parquetThickness:['epaisseur parquet'],floorHeight:['hauteur a monter','hauteur sol fini'],openingLength:['longueur tremie'],openingWidth:['largeur tremie'],trimmerThickness:['epaisseur lincoir','lincoir'],slabThickness:['epaisseur plancher','epaisseur dalle'],stairWidth:['largeur escalier'],stairShape:['forme escalier','type escalier'],turnDirection:['sens tournant'],stepCount:['nombre marches'],stepHeight:['hauteur marche'],tread:['giron'],headroom:['echappee'],startingSpace:['reculement']};const plain=label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();return custom[key]||[plain]}
@@ -265,7 +265,7 @@ function startFullVoice(d){
 function commandText(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/-/g,' ').replace(/\s+/g,' ').trim()}
 function workAtCommand(text){const cards=[...document.querySelectorAll('.work-card')],m=text.match(/ouvrage\s+(\d+)/);if(m)activeWorkIndex=Math.min(cards.length-1,Math.max(0,Number(m[1])-1));return cards[activeWorkIndex]||cards[cards.length-1]}
 function typeFromCommand(text){const aliases={fenetre:'Fenêtre','porte entree':"Porte d'entrée",'porte d entree':"Porte d'entrée",'porte interieure':'Porte intérieure','porte garage':'Porte de garage','baie coulissante':'Baie coulissante','volet roulant motorise':'Volet roulant motorisé','volet roulant manuel':'Volet roulant manuel','volet bois':'Volet bois',store:'Store',escalier:'Escalier',parquet:'Parquet',placard:'Placard',agencement:'Agencement','garde corps':'Garde-corps / main courante','main courante':'Garde-corps / main courante',bardage:'Bardage',vitrage:'Vitrage'};return Object.entries(aliases).sort((a,b)=>b[0].length-a[0].length).find(([a])=>text.includes(a))?.[1]||''}
-function setSimpleVoiceField(id,text,prefixes){for(const p of prefixes){const i=text.indexOf(p);if(i>=0){const raw=text.slice(i+p.length).replace(/^(est|:|de| )+/,'').trim();if(raw){$(id).value=raw;$(id).dispatchEvent(new Event('input'));return true}}}return false}
+function setSimpleVoiceField(id,text,prefixes){for(const p of prefixes){const i=text.indexOf(p);if(i>=0){const raw=text.slice(i+p.length).replace(/^(est|:|de| )+/,'').trim();if(raw){$(id).value=raw;$(id).dispatchEvent(new Event('input',{bubbles:true}));return true}}}return false}
 function stopVoiceAssistant(message='Assistant vocal arrêté.'){
   voiceControlOn=false;if(commandRecognition)try{commandRecognition.stop()}catch(e){}commandRecognition=null;const b=$('voiceAssistant');b.classList.remove('listening');b.textContent='🎙️ Démarrer les commandes vocales';$('voiceFeedback').textContent=message;
 }
@@ -303,12 +303,12 @@ $('pageType').innerHTML=opt(workTypes);
 $('pageType').onchange=e=>{const page=pages[activePageIndex];if(!page)return;page.type=e.target.value;page.other=e.target.value==='Autre'?$('pageOther').value:'';$('pageOtherWrap').classList.toggle('hidden',e.target.value!=='Autre');document.querySelectorAll('.work-card').forEach(d=>{d.querySelector('.wtype').value=page.type;d.querySelector('.wother').value=page.other;renderSpecific(d,page.type)});captureActivePage();renderPageTabs()};
 $('pageOther').oninput=e=>{const page=pages[activePageIndex];if(!page)return;page.other=e.target.value;document.querySelectorAll('.wother').forEach(el=>el.value=page.other);captureActivePage();renderPageTabs()};
 $('addPage').onclick=()=>createPage();
-$('removePage').onclick=()=>{if(pages.length===1)return;if(confirm('Supprimer cette page et tous ses ouvrages ?')){pages.splice(activePageIndex,1);showPage(Math.min(activePageIndex,pages.length-1),false)}};
-$('addWork').onclick=()=>{addWork({type:pages[activePageIndex]?.type||'',other:pages[activePageIndex]?.other||''});captureActivePage();renderPageTabs()};
-$('photos').onchange=async e=>{for(const f of e.target.files){photoData.push(await fileToDataURL(f))}renderPhotos()};
+$('removePage').onclick=()=>{if(pages.length===1)return;if(confirm('Supprimer cette page et tous ses ouvrages ?')){pages.splice(activePageIndex,1);showPage(Math.min(activePageIndex,pages.length-1),false);scheduleAutosave()}};
+$('addWork').onclick=()=>{addWork({type:pages[activePageIndex]?.type||'',other:pages[activePageIndex]?.other||''});captureActivePage();renderPageTabs();scheduleAutosave()};
+$('photos').onchange=async e=>{for(const f of e.target.files){photoData.push(await fileToDataURL(f))}renderPhotos();scheduleAutosave()};
 function fileToDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
-function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid');if(!g)return;g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.alt='Photo ouvrage';img.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d)}};wrap.appendChild(img);g.appendChild(wrap)})}
-function renderPhotos(){const g=$('photoGrid');g.innerHTML='';photoData.forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.onclick=()=>{if(confirm('Supprimer cette photo ?')){photoData.splice(i,1);renderPhotos()}};wrap.appendChild(img);g.appendChild(wrap)})}
+function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid');if(!g)return;g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.alt='Photo ouvrage';img.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d);scheduleAutosave()}};wrap.appendChild(img);g.appendChild(wrap)})}
+function renderPhotos(){const g=$('photoGrid');g.innerHTML='';photoData.forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img');img.src=src;img.onclick=()=>{if(confirm('Supprimer cette photo ?')){photoData.splice(i,1);renderPhotos();scheduleAutosave()}};wrap.appendChild(img);g.appendChild(wrap)})}
 function projectPagesData(){captureActivePage();return pages.map(page=>({...page,works:(page.works||[]).map(w=>({...w,type:page.type,other:page.other}))}))}
 function baseLines(){
   let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);
@@ -321,13 +321,63 @@ $('copySummary').onclick=async()=>{await navigator.clipboard.writeText($('summar
 $('shareSummary').onclick=async()=>{const text=$('summary').value;if(navigator.share)await navigator.share({title:$('projectTitle').value||'Relevé chantier',text});else{await navigator.clipboard.writeText(text);alert('Partage non disponible : texte copié.')}};
 $('searchWeb').onclick=()=>{captureActivePage();const page=pages[activePageIndex]||{},first=page.works?.[0]||{};const q=[shown(page.type,page.other),first.material,$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
 function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('releveChantierDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function save(){const db=await dbOpen(),savedPages=projectPagesData();const data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,pages:savedPages,works:savedPages.flatMap(p=>p.works)};fields.forEach(f=>data[f]=$(f).value);currentId=data.id;const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=()=>{renderProjects();alert('Chantier et pages enregistrés sur cet appareil.')}}
+function setSaveState(state){
+  const button=$('saveProject');if(!button)return;
+  button.textContent=state==='saving'?'Enregistrement…':state==='saved'?'Enregistré ✓':state==='error'?'Réessayer':'Enregistrer';
+}
+function hasProjectContent(savedPages){
+  const mainFields=fields.filter(f=>f!=='projectDate').some(f=>String($(f).value||'').trim());
+  const workContent=savedPages.some(page=>page.type||page.other||(page.works||[]).some(work=>Object.entries(work).some(([key,value])=>{
+    if(['type','other'].includes(key))return false;
+    if(key==='qty')return String(value||'1')!=='1';
+    if(Array.isArray(value))return value.length>0;
+    if(value&&typeof value==='object')return Object.values(value).some(Boolean);
+    return Boolean(String(value||'').trim());
+  })));
+  return mainFields||photoData.length>0||workContent;
+}
+function scheduleAutosave(){
+  changeVersion++;setSaveState('dirty');clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>persistProject(false),900);
+}
+async function persistProject(notify=false){
+  clearTimeout(autoSaveTimer);
+  const savedPages=projectPagesData(),versionToSave=changeVersion;
+  if(!notify&&!hasProjectContent(savedPages)){lastSavedVersion=changeVersion;setSaveState('idle');return}
+  if(isSaving){autoSaveTimer=setTimeout(()=>persistProject(false),300);return}
+  isSaving=true;setSaveState('saving');
+  try{
+    const db=await dbOpen(),data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,pages:savedPages,works:savedPages.flatMap(p=>p.works)};
+    fields.forEach(f=>data[f]=$(f).value);currentId=data.id;
+    await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
+    lastSavedVersion=Math.max(lastSavedVersion,versionToSave);setSaveState(changeVersion>lastSavedVersion?'dirty':'saved');await renderProjects();
+    if(notify)alert('Chantier et pages enregistrés sur cet appareil.');
+  }catch(error){
+    console.error('Échec de l’enregistrement',error);setSaveState('error');
+    if(notify)alert('L’enregistrement a échoué. Vérifiez l’espace disponible, puis réessayez.');
+  }finally{
+    isSaving=false;if(changeVersion>lastSavedVersion)autoSaveTimer=setTimeout(()=>persistProject(false),300);
+  }
+}
+function save(){return persistProject(true)}
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
 async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
 function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.measures?.length){const m=x.measures?.[0]||{};return[{type:x.workType||'',other:x.workOther||'',material:x.material||'',materialOther:x.materialOther||'',install:x.installType||'',installOther:x.installOther||'',width:m.w||'',height:m.h||'',extra:(x.measures||[]).slice(1).map(a=>`${a.label||'Dimension'} : ${a.w||''}${a.h?' x '+a.h:''} ${a.u||'mm'}`).join('\n')}]}return[{}]}
-function loadProject(x){currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();scrollTo({top:0,behavior:'smooth'})}
-function clearForm(){currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value=''}
+function loadProject(x){clearTimeout(autoSaveTimer);currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();changeVersion=lastSavedVersion=0;setSaveState('saved');scrollTo({top:0,behavior:'smooth'})}
+function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value='';changeVersion=lastSavedVersion=0;setSaveState('idle')}
 $('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
+function trackEditableChange(event){
+  const target=event.target;
+  if(target.matches('input:not([type="file"]),select,textarea')&&target.id!=='summary')scheduleAutosave();
+}
+document.addEventListener('input',trackEditableChange);
+document.addEventListener('change',trackEditableChange);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&changeVersion>lastSavedVersion)persistProject(false)});
+window.addEventListener('pagehide',()=>{if(changeVersion>lastSavedVersion)persistProject(false)});
+window.addEventListener('beforeunload',event=>{
+  if(changeVersion<=lastSavedVersion&&!isSaving)return;
+  event.preventDefault();event.returnValue='';
+});
 if('serviceWorker' in navigator){
   let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;location.reload()}});
