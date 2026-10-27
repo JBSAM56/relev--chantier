@@ -105,6 +105,8 @@
     <div class="row"><button class="primary" id="makeSupplier" type="button">Créer demande de prix fournisseur</button><button class="secondary" id="makeQuote" type="button">Créer base de devis</button></div>
     <label style="margin-top:10px">Texte généré</label><textarea id="summary" style="min-height:220px" placeholder="Le résumé apparaîtra ici..."></textarea>
     <div class="row"><button class="ghost" id="copySummary" type="button">Copier le texte</button><button class="ghost" id="shareSummary" type="button">Partager</button></div>
+    <div class="row" style="margin-top:10px"><button class="primary" id="downloadPdf" type="button">Télécharger le relevé en PDF</button></div>
+    <div class="status" id="pdfStatus" role="status" aria-live="polite"></div>
   </section>
 
   <section class="card">
@@ -135,6 +137,7 @@
   </div>
 </div>
 <div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button><label class="file-picker ghost" for="backupFile">Importer</label></div>
+<script src="jspdf.umd.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceCommandQueue=Promise.resolve(),voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false,photoEditorState=null;
@@ -403,12 +406,97 @@ function baseLines(){
   if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines;
 }
 function renderSuppliers(){const box=$('supplierList'),options=$('supplierOptions');box.innerHTML='';options.innerHTML=suppliers.map(name=>`<option value="${esc(name)}"></option>`).join('');suppliers.forEach((name,index)=>{const item=document.createElement('div'),label=document.createElement('span'),remove=document.createElement('button');item.className='supplier-item';label.textContent=name;remove.type='button';remove.className='danger';remove.textContent='×';remove.setAttribute('aria-label','Supprimer '+name);remove.onclick=()=>{suppliers.splice(index,1);renderSuppliers();scheduleAutosave()};item.append(label,remove);box.appendChild(item)})}
+function preparePdfImage(source,maxPixels=1400,quality=.78){
+  return new Promise((resolve,reject)=>{
+    const image=new Image();image.onload=()=>{
+      try{
+        const scale=Math.min(1,maxPixels/Math.max(image.naturalWidth,image.naturalHeight)),width=Math.max(1,Math.round(image.naturalWidth*scale)),height=Math.max(1,Math.round(image.naturalHeight*scale));
+        const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=width;canvas.height=height;context.fillStyle='#fff';context.fillRect(0,0,width,height);context.drawImage(image,0,0,width,height);
+        resolve({data:canvas.toDataURL('image/jpeg',quality),width,height});
+      }catch(error){reject(error)}
+    };image.onerror=()=>reject(new Error("Une image n'a pas pu être chargée."));image.src=source;
+  });
+}
+function pdfFileName(title,date){
+  const base=(title||'releve-de-cotes').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'releve-de-cotes';
+  return base+'-'+(date||new Date().toISOString().slice(0,10))+'.pdf';
+}
+async function downloadProjectPdf(){
+  const status=$('pdfStatus'),button=$('downloadPdf');status.style.color='var(--ok)';status.textContent='Création du PDF…';button.disabled=true;
+  try{
+    if(!window.jspdf?.jsPDF)throw new Error("Le générateur PDF n'est pas disponible.");
+    const projectTitle=$('projectTitle').value.trim(),projectDate=$('projectDate').value,pdfPages=projectPagesData();
+    const hasWork=pdfPages.some(page=>(page.works||[]).some(work=>Object.entries(work).some(([key,value])=>{if(['type','other','qty'].includes(key))return false;if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.values(value).some(Boolean);return Boolean(value&&String(value).trim())})));
+    if(!projectTitle&&!$('contactName').value.trim()&&!$('address').value.trim()&&!$('notes').value.trim()&&!photoData.length&&!hasWork)throw new Error('Renseignez le chantier ou au moins un ouvrage avant de créer le PDF.');
+    const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true}),margin=14,pageWidth=210,pageHeight=297,contentWidth=pageWidth-margin*2,brand=[132,44,44];
+    let logo=null,y=34;try{logo=await preparePdfImage('logo-sam.png',1000,.9)}catch(error){console.warn('Logo absent du PDF',error)}
+    doc.setProperties({title:'Relevé de cotes - '+(projectTitle||'Chantier'),subject:'Relevé de chantier',author:'SAM Artisans Menuisiers'});
+    function pageHeader(){
+      if(logo){const logoWidth=48,logoHeight=logoWidth*logo.height/logo.width;doc.addImage(logo.data,'JPEG',margin,10,logoWidth,logoHeight,undefined,'FAST')}
+      doc.setTextColor(17,24,39);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('RELEVÉ DE COTES',pageWidth-margin,16,{align:'right'});
+      doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(107,114,128);doc.text(projectTitle||'Chantier sans titre',pageWidth-margin,22,{align:'right'});
+      doc.setDrawColor(...brand);doc.setLineWidth(.7);doc.line(margin,29,pageWidth-margin,29);y=36;
+    }
+    function ensureSpace(height){if(y+height>pageHeight-18){doc.addPage();pageHeader()}}
+    function section(title){
+      ensureSpace(11);doc.setFillColor(246,247,249);doc.roundedRect(margin,y-5,contentWidth,9,1,1,'F');doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...brand);doc.text(String(title),margin+3,y+1);y+=9;
+    }
+    function field(label,value,unit=''){
+      if(value===undefined||value===null||String(value).trim()==='')return;
+      const suffix=unit&&['mm','m','m²','ml'].includes(unit)?' '+unit:'',lines=doc.splitTextToSize(String(label)+' : '+String(value)+suffix,contentWidth);
+      ensureSpace(lines.length*4.4+2);doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(31,41,55);doc.text(lines,margin,y,{lineHeightFactor:1.2});y+=lines.length*4.4+1;
+    }
+    function workHeading(title){
+      ensureSpace(9);doc.setDrawColor(203,213,225);doc.setLineWidth(.35);doc.line(margin,y-2,pageWidth-margin,y-2);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(51,65,85);doc.text(String(title),margin,y+3);y+=8;
+    }
+    async function imageList(title,items){
+      const sources=(items||[]).filter(Boolean);if(!sources.length)return;ensureSpace(110);section(title);
+      for(let index=0;index<sources.length;index++){
+        try{
+          const image=await preparePdfImage(sources[index]),maxWidth=145,maxHeight=90,scale=Math.min(maxWidth/image.width,maxHeight/image.height),width=image.width*scale,height=image.height*scale;
+          ensureSpace(height+8);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(107,114,128);doc.text('Image '+(index+1),margin,y);y+=3;
+          doc.addImage(image.data,'JPEG',margin,y,width,height,undefined,'FAST');y+=height+5;
+        }catch(error){console.warn('Image ignorée dans le PDF',error);field('Image '+(index+1),'impossible à intégrer')}
+      }
+    }
+    pageHeader();section('Chantier et client');
+    field('Chantier',projectTitle||'Sans titre');field('Date',projectDate?new Date(projectDate+'T12:00:00').toLocaleDateString('fr-FR'):'');
+    field('Client / contact',$('contactName').value);field('Téléphone',$('contactPhone').value);field('E-mail',$('contactEmail').value);field('Adresse du chantier',$('address').value);
+    const supplierNames=[...new Set([$('supplier').value,...suppliers].filter(Boolean))];if(supplierNames.length){section('Fournisseurs et quincaillerie');field('Fabricants / fournisseurs',supplierNames.join(', '));field('Référence / gamme',$('hardwareRef').value);field('Besoin spécifique',$('hardwareNeed').value)}
+    if($('notes').value){section('Notes générales');field('Notes',$('notes').value)}
+    await imageList('Photos générales du chantier',photoData);
+    for(let pageIndex=0;pageIndex<pdfPages.length;pageIndex++){
+      const page=pdfPages[pageIndex];section('Page '+(pageIndex+1)+' - '+(shown(page.type,page.other)||'Type non renseigné'));
+      for(let workIndex=0;workIndex<(page.works||[]).length;workIndex++){
+        const work=page.works[workIndex];workHeading('Ouvrage '+(workIndex+1)+(work.location?' - '+work.location:''));
+        field('Matériau',shown(work.material,work.materialOther));field('Type de pose',shown(work.install,work.installOther));
+        if(work.width||work.height)field('Dimensions',(work.width||'-')+' x '+(work.height||'-'),'mm');
+        field("Hauteur d'allège",work.sill,'mm');field('Épaisseur / profondeur',work.depth,'mm');field('Quantité',work.qty);field('Repère / localisation',work.location);
+        (specificSchemas[page.type]||[]).forEach(([key,label,unit])=>field(label,work.specific?.[key],unit));
+        field('Cotes complémentaires',work.extra);field('Observations',work.obs);
+        await imageList('Photos - page '+(pageIndex+1)+', ouvrage '+(workIndex+1),work.photos);
+        const sketches=Array.isArray(work.sketches)?work.sketches.filter(Boolean):(work.sketch?[work.sketch]:[]);
+        await imageList('Croquis - page '+(pageIndex+1)+', ouvrage '+(workIndex+1),sketches);
+      }
+    }
+    const totalPages=doc.getNumberOfPages(),generated=new Date().toLocaleString('fr-FR');
+    for(let pageNumber=1;pageNumber<=totalPages;pageNumber++){doc.setPage(pageNumber);doc.setDrawColor(209,213,219);doc.setLineWidth(.2);doc.line(margin,pageHeight-13,pageWidth-margin,pageHeight-13);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(107,114,128);doc.text('Généré le '+generated,margin,pageHeight-8);doc.text('Page '+pageNumber+' / '+totalPages,pageWidth-margin,pageHeight-8,{align:'right'})}
+    const name=pdfFileName(projectTitle,projectDate),blob=doc.output('blob'),file=new File([blob],name,{type:'application/pdf'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({title:'Relevé de cotes '+(projectTitle||''),files:[file]});status.textContent='PDF créé et partagé.';return}catch(error){if(error?.name==='AbortError'){status.textContent='Partage du PDF annulé.';return}}
+    }
+    downloadBackupFile(file);status.textContent='PDF téléchargé : '+name;
+  }catch(error){
+    console.error('Échec de la création du PDF',error);status.style.color='#991b1b';status.textContent='Le PDF n’a pas pu être créé : '+(error.message||'erreur inconnue');
+  }finally{button.disabled=false}
+}
 function addSupplier(){const input=$('supplierEntry'),name=input.value.trim();if(!name)return;if(!suppliers.some(item=>normalize(item)===normalize(name)))suppliers.push(name);if(!$('supplier').value)$('supplier').value=name;input.value='';renderSuppliers();scheduleAutosave()}
 $('addSupplier').onclick=addSupplier;$('supplierEntry').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();addSupplier()}};
 $('makeSupplier').onclick=()=>{let l=['Bonjour,','','Pouvez-vous me transmettre votre meilleure offre de prix pour le besoin suivant :','',...baseLines()];if($('hardwareRef').value)l.push(`Référence / gamme : ${$('hardwareRef').value}`);if($('hardwareNeed').value)l.push(`Quincaillerie / besoin spécifique : ${$('hardwareNeed').value}`);l.push('','Merci d\'indiquer le prix, le délai et les éventuelles contraintes techniques.','','Cordialement.');$('summary').value=l.join('\n')};
 $('makeQuote').onclick=()=>{$('summary').value=['Fourniture et pose des ouvrages suivants :','',...baseLines(),'','Prestations à prévoir :','- Prise de cotes et vérification sur site','- Fourniture des ouvrages selon caractéristiques ci-dessus','- Pose, réglages et finitions','- Évacuation et traitement des déchets si dépose de l\'existant','','À compléter après retour fournisseur : prix d\'achat, temps de pose, accessoires, finitions et marge.'].join('\n')};
 $('copySummary').onclick=async()=>{await navigator.clipboard.writeText($('summary').value);alert('Texte copié.')};
 $('shareSummary').onclick=async()=>{const text=$('summary').value;if(navigator.share)await navigator.share({title:$('projectTitle').value||'Relevé chantier',text});else{await navigator.clipboard.writeText(text);alert('Partage non disponible : texte copié.')}};
+$('downloadPdf').onclick=downloadProjectPdf;
 $('searchWeb').onclick=()=>{captureActivePage();const page=pages[activePageIndex]||{},first=page.works?.[0]||{};const q=[shown(page.type,page.other),first.material,$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
 const BACKUP_FORMAT='releve-chantier-backup',BACKUP_VERSION=1,MAX_BACKUP_SIZE=250*1024*1024;
 function setBackupStatus(message,isError=false){const status=$('backupStatus');status.textContent=message;status.style.color=isError?'#991b1b':'var(--ok)'}
