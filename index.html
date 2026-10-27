@@ -104,7 +104,17 @@
     <div class="row"><button class="ghost" id="copySummary" type="button">Copier le texte</button><button class="ghost" id="shareSummary" type="button">Partager</button></div>
   </section>
 
-  <section class="card"><h2>Mes projets enregistrés</h2><div id="projectList"><span class="hint">Aucun projet enregistré.</span></div></section>
+  <section class="card">
+    <h2>Mes projets enregistrés</h2>
+    <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
+    <div class="row" style="margin-top:12px">
+      <button class="secondary" id="exportBackup" type="button">Exporter vers iPad / PC</button>
+      <button class="ghost" id="importBackup" type="button">Importer une sauvegarde</button>
+    </div>
+    <input class="hidden" id="backupFile" type="file" accept="application/json,.json" />
+    <div class="hint">Le fichier contient tous les dossiers, photos et croquis. Transférez-le avec AirDrop, iCloud Drive, e-mail ou une clé USB.</div>
+    <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
+  </section>
 </main>
 <div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
 <script>
@@ -320,6 +330,76 @@ $('makeQuote').onclick=()=>{$('summary').value=['Fourniture et pose des ouvrages
 $('copySummary').onclick=async()=>{await navigator.clipboard.writeText($('summary').value);alert('Texte copié.')};
 $('shareSummary').onclick=async()=>{const text=$('summary').value;if(navigator.share)await navigator.share({title:$('projectTitle').value||'Relevé chantier',text});else{await navigator.clipboard.writeText(text);alert('Partage non disponible : texte copié.')}};
 $('searchWeb').onclick=()=>{captureActivePage();const page=pages[activePageIndex]||{},first=page.works?.[0]||{};const q=[shown(page.type,page.other),first.material,$('hardwareNeed').value,$('hardwareRef').value,$('supplier').value].filter(Boolean).join(' ');window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank')};
+const BACKUP_FORMAT='releve-chantier-backup',BACKUP_VERSION=1,MAX_BACKUP_SIZE=250*1024*1024;
+function setBackupStatus(message,isError=false){const status=$('backupStatus');status.textContent=message;status.style.color=isError?'#991b1b':'var(--ok)'}
+async function flushPendingSave(){
+  clearTimeout(autoSaveTimer);
+  while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
+  if(changeVersion>lastSavedVersion)await persistProject(false);
+  if(changeVersion>lastSavedVersion)throw new Error("Le dossier en cours n'a pas pu être enregistré.");
+}
+function downloadBackupFile(file){
+  const url=URL.createObjectURL(file),link=document.createElement('a');
+  link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function exportBackup(){
+  setBackupStatus('Préparation de la sauvegarde…');
+  try{
+    await flushPendingSave();
+    const projects=await allProjects();
+    if(!projects.length){setBackupStatus('Aucun dossier à exporter.',true);return}
+    const exportedAt=new Date().toISOString();
+    const backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects};
+    const name='releve-chantier-'+exportedAt.slice(0,10)+'.json';
+    const file=new File([JSON.stringify(backup)],name,{type:'application/json'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({title:'Sauvegarde Relevé Chantier',files:[file]});
+        setBackupStatus(projects.length+' dossier(s) partagé(s) avec succès.');
+      }catch(error){
+        if(error?.name==='AbortError')setBackupStatus('Partage annulé.');
+        else throw error;
+      }
+    }else{
+      downloadBackupFile(file);
+      setBackupStatus(projects.length+' dossier(s) exporté(s) dans '+name+'.');
+    }
+  }catch(error){
+    console.error("Échec de l'export",error);
+    setBackupStatus("L'export a échoué : "+(error.message||'erreur inconnue'),true);
+  }
+}
+function validateBackup(backup){
+  if(!backup||backup.format!==BACKUP_FORMAT||backup.version!==BACKUP_VERSION||!Array.isArray(backup.projects))throw new Error('Ce fichier ne correspond pas à une sauvegarde Relevé Chantier compatible.');
+  if(!backup.projects.every(project=>project&&typeof project==='object'&&Number.isFinite(project.id)&&Number.isFinite(project.updated)&&Array.isArray(project.pages)&&Array.isArray(project.photos)))throw new Error('La sauvegarde contient un dossier incomplet ou endommagé.');
+}
+async function importBackupFile(file){
+  setBackupStatus('Lecture de la sauvegarde…');
+  try{
+    if(file.size>MAX_BACKUP_SIZE)throw new Error('Le fichier dépasse la taille maximale de 250 Mo.');
+    await flushPendingSave();
+    const backup=JSON.parse(await file.text());
+    validateBackup(backup);
+    const newestImported=new Map();
+    backup.projects.forEach(project=>{const previous=newestImported.get(project.id);if(!previous||project.updated>=previous.updated)newestImported.set(project.id,project)});
+    const existing=await allProjects(),existingById=new Map(existing.map(project=>[project.id,project]));
+    const projectsToWrite=[...newestImported.values()].filter(project=>!existingById.has(project.id)||project.updated>=existingById.get(project.id).updated);
+    if(!projectsToWrite.length){setBackupStatus('Aucun dossier plus récent à importer.');return}
+    if(!confirm('Importer '+projectsToWrite.length+' dossier(s) ? Les versions les plus récentes seront conservées.')){setBackupStatus('Import annulé.');return}
+    const db=await dbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('projects','readwrite'),store=tx.objectStore('projects');
+      projectsToWrite.forEach(project=>store.put(project));
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });
+    await renderProjects();
+    setBackupStatus(projectsToWrite.length+' dossier(s) importé(s) avec succès.');
+  }catch(error){
+    console.error("Échec de l'import",error);
+    setBackupStatus("L'import a échoué : "+(error.message||'erreur inconnue'),true);
+  }
+}
 function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('releveChantierDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function setSaveState(state){
   const button=$('saveProject');if(!button)return;
@@ -366,6 +446,9 @@ function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.mea
 function loadProject(x){clearTimeout(autoSaveTimer);currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();changeVersion=lastSavedVersion=0;setSaveState('saved');scrollTo({top:0,behavior:'smooth'})}
 function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];renderPhotos();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value='';changeVersion=lastSavedVersion=0;setSaveState('idle')}
 $('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
+$('exportBackup').onclick=exportBackup;
+$('importBackup').onclick=()=>$('backupFile').click();
+$('backupFile').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(file)await importBackupFile(file)};
 function trackEditableChange(event){
   const target=event.target;
   if(target.matches('input:not([type="file"]),select,textarea')&&target.id!=='summary')scheduleAutosave();
