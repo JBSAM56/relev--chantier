@@ -246,16 +246,16 @@ function updateConditionalSpecificFields(d,type){
   const refresh=()=>{const visible=opening.value==='Autre';wrap.classList.toggle('hidden',!visible);if(!visible)other.value=''};opening.addEventListener('change',refresh);refresh();
 }
 function initSketch(d){
-  const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',noteLine=0;
+  const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',noteLine=0,paintVersion=0;
   function refreshSelect(){select.innerHTML=d._sketches.map((_,i)=>`<option value="${i}" ${i===d._activeSketch?'selected':''}>Croquis ${i+1}</option>`).join('')}
   function point(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.clientWidth/r.width,y:(e.clientY-r.top)*c.clientHeight/r.height}}
   function dash(){const style=d.querySelector('.sketch-style').value;return style==='dotted'?[2,7]:style==='dashed'?[12,8]:[]}
   function stroke(a,b,currentMode=mode){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value);ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
-  function paintSaved(){const saved=d._sketches[d._activeSketch]||'',w=c.clientWidth,h=c.clientHeight;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.restore();if(saved){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,w,h);im.src=saved}}
+  function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'',w=c.clientWidth,h=c.clientHeight;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.restore();if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,w,h)};im.src=saved}}
   function size(){const w=Math.max(280,c.clientWidth),h=c.clientHeight,ratio=Math.max(1,window.devicePixelRatio||1);c.width=w*ratio;c.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);paintSaved()}
   function saveSketch(){d._sketches[d._activeSketch]=c.toDataURL('image/png');scheduleAutosave()}
   function setMode(next){mode=next;d.querySelectorAll('.pen,.straight,.eraser').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
-  c.onpointerdown=e=>{drawing=true;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
+  c.onpointerdown=e=>{paintVersion++;drawing=true;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
   c.onpointermove=e=>{if(!drawing)return;const p=point(e);if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else{stroke(last,p);last=p}e.preventDefault()};
   c.onpointerup=e=>{if(!drawing)return;const p=point(e);if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last&&Math.abs(last.x-p.x)<1&&Math.abs(last.y-p.y)<1)stroke({x:p.x-.5,y:p.y},p);drawing=false;saveSketch();e.preventDefault()};
   c.onpointercancel=e=>{if(drawing){if(mode==='straight'&&preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
