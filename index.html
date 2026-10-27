@@ -52,7 +52,7 @@
   <section class="card voice-panel">
     <h2>Assistant vocal de l’application</h2>
     <button class="voice-main" id="voiceAssistant" type="button">🎙️ Démarrer les commandes vocales</button>
-    <div class="voice-feedback" id="voiceFeedback">Appuyez sur le bouton, puis parlez naturellement.</div>
+    <div class="voice-feedback" id="voiceFeedback">Appuyez sur le bouton, puis dictez une information à la fois, par exemple « matériau PVC » ou « largeur 1 mètre 20 ».</div>
     <details><summary class="hint" style="cursor:pointer;margin-top:9px">Voir des exemples de commandes</summary><div class="command-list">
       « Enregistrer le chantier » • « Nouvelle page parquet » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
       « Longueur pièce 5 mètres, largeur pièce 4 mètres, type parquet contrecollé » • « Hauteur à monter 2 800 millimètres, largeur trémie 900 »<br>
@@ -137,7 +137,7 @@
 <div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button><label class="file-picker ghost" for="backupFile">Importer</label></div>
 <script>
 const $=id=>document.getElementById(id);
-let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false,photoEditorState=null;
+let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceCommandQueue=Promise.resolve(),voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false,photoEditorState=null;
 const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
 const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
@@ -221,7 +221,7 @@ function addWork(w={}){
     <div class="full"><label>Dimensions / cotes complémentaires</label><div class="field-with-mic"><textarea class="wextra" placeholder="Ex. clair de passage, hors-tout, réservation, coffre, jeux...">${esc(w.extra)}</textarea>${micButton(id+'-extra')}</div></div>
     <div class="full"><label>Observations sur l'ouvrage</label><div class="field-with-mic"><textarea class="wobs" placeholder="Finition, couleur, sens d'ouverture, vitrage, occultation, contraintes...">${esc(w.obs)}</textarea>${micButton(id+'-obs')}</div></div>
     <button class="voice-all" type="button">🎙️ Dicter toutes les informations de cet ouvrage</button>
-    <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres, largeur pièce 3 virgule 8, type parquet contrecollé, pose collée, épaisseur 14 millimètres ». Marquez une courte pause entre chaque information.</div>
+    <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres », puis « largeur pièce 3 virgule 8 », puis « type parquet contrecollé ». Les champs sont remplis après chaque courte pause.</div>
     <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button">T Note / cote</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">Chaque ouvrage peut contenir plusieurs croquis. Le mode « Ligne droite » redresse automatiquement le trait.</div></div>
     <div class="full"><label>Photos de cet ouvrage</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Prendre une ou plusieurs photos liées uniquement à cet ouvrage.</div><div class="photo-grid wphoto-grid"></div></div>
   </div>`;
@@ -287,17 +287,56 @@ function startVoice(target,btn){
   recognition.onend=()=>{if(activeMic)activeMic.classList.remove('listening');activeMic=null;$('dictationStatus').textContent='Dictée terminée.'};recognition.onerror=()=>{$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.'};recognition.start();
 }
 function voiceAliases(key,label){const custom={roomLength:['longueur piece','longueur de la piece'],roomWidth:['largeur piece','largeur de la piece'],roomArea:['surface'],parquetType:['type parquet'],layingPattern:['motif de pose','sens de pose'],layingMethod:['mode de pose','pose'],parquetThickness:['epaisseur parquet'],floorHeight:['hauteur a monter','hauteur sol fini'],openingLength:['longueur tremie'],openingWidth:['largeur tremie'],trimmerThickness:['epaisseur lincoir','lincoir'],slabThickness:['epaisseur plancher','epaisseur dalle'],stairWidth:['largeur escalier'],stairShape:['forme escalier','type escalier'],turnDirection:['sens tournant'],stepCount:['nombre marches'],stepHeight:['hauteur marche'],tread:['giron'],headroom:['echappee'],startingSpace:['reculement']};const plain=label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();return custom[key]||[plain]}
+function voiceNumber(value,unit=''){
+  const targetMeters=unit==='m'||unit==='m²';let text=value.replace(/virgule/g,'.').replace(/(\d)\s+(?=\d{3}\b)/g,'$1');
+  let match=text.match(/(\d+(?:[.,]\d+)?)\s*(?:metres?|m)\b(?:\s*(\d{1,2}))?/);
+  if(match){let meters=Number(match[1].replace(',','.'));if(match[2]&&!match[1].includes('.')&&!match[1].includes(','))meters+=Number(match[2])/100;return String(targetMeters?Math.round(meters*1000)/1000:Math.round(meters*1000))}
+  match=text.match(/(\d+(?:[.,]\d+)?)\s*(?:centimetres?|cm)\b/);if(match){const amount=Number(match[1].replace(',','.'));return String(targetMeters?amount/100:Math.round(amount*10))}
+  match=text.match(/(\d+(?:[.,]\d+)?)\s*(?:millimetres?|mm)\b/);if(match){const amount=Number(match[1].replace(',','.'));return String(targetMeters?amount/1000:amount)}
+  match=text.match(/\d+(?:[.,]\d+)?/);return match?match[0].replace(',','.'):'';
+}
 function fillFromFullVoice(d,spoken){
   const type=d.querySelector('.wtype').value,schema=specificSchemas[type]||[],text=spoken.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/[^a-z0-9,. ]/g,' ').replace(/\s+/g,' ').trim();
   const common=[['width','largeur',d.querySelector('.ww')],['height','hauteur',d.querySelector('.wh')],['sill','hauteur allege',d.querySelector('.wa')],['depth','epaisseur mur',d.querySelector('.wd')],['qty','quantite',d.querySelector('.wq')],['location','localisation',d.querySelector('.wloc')],['obs','observations',d.querySelector('.wobs')]];
   const entries=common.map(([key,a,el])=>({key,aliases:[a],el})).concat(schema.map(([key,label])=>({key,aliases:voiceAliases(key,label),el:d.querySelector(`[data-specific="${key}"]`)})));
   const hits=[];entries.forEach(entry=>entry.aliases.forEach(alias=>{const i=text.indexOf(alias);if(i>=0)hits.push({i,alias,entry})}));hits.sort((a,b)=>a.i-b.i);const unique=hits.filter((h,i)=>!hits.slice(0,i).some(x=>x.entry===h.entry));unique.sort((a,b)=>a.i-b.i);
   let count=0;unique.forEach((h,i)=>{let value=text.slice(h.i+h.alias.length,unique[i+1]?.i??text.length).replace(/^(est|de|du|a|:| )+/,'').replace(/\b(puis|et ensuite)\b.*$/,'').replace(/[,. ]+$/,'').trim();if(!value)return;const el=h.entry.el;if(el.tagName==='SELECT'){if(setSelectByVoice(el,value))count++}else{if(el.inputMode==='decimal'||el.inputMode==='numeric')value=value.replace(/virgule/g,'.').replace(/\b(millimetres?|mm|metres?|m|centimetres?|cm)\b/g,'').replace(/[^0-9.,]/g,'').trim();if(value){el.value=value;count++}}});
-  if(!count)d.querySelector('.wobs').value=(d.querySelector('.wobs').value+' '+spoken).trim();scheduleAutosave();return count;
+  if(count)scheduleAutosave();return count;
+}
+function fillVoiceFields(d,spoken){
+  const type=d.querySelector('.wtype').value,schema=specificSchemas[type]||[],text=spoken.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/[^a-z0-9,. ]/g,' ').replace(/\s+/g,' ').trim();
+  const installAliases=schema.some(([key])=>key==='layingMethod')?['type de pose','installation']:['type de pose','mode de pose','pose','installation'];
+  const common=[
+    {key:'material',aliases:['materiau','matiere'],el:d.querySelector('.wmaterial')},
+    {key:'install',aliases:installAliases,el:d.querySelector('.winstall')},
+    {key:'width',aliases:['largeur hors tout','largeur'],el:d.querySelector('.ww'),unit:'mm'},
+    {key:'height',aliases:['hauteur hors tout','hauteur'],el:d.querySelector('.wh'),unit:'mm'},
+    {key:'sill',aliases:['hauteur allege','allege'],el:d.querySelector('.wa'),unit:'mm'},
+    {key:'depth',aliases:['epaisseur du mur','epaisseur mur','profondeur'],el:d.querySelector('.wd'),unit:'mm'},
+    {key:'qty',aliases:['quantite','nombre ouvrages'],el:d.querySelector('.wq'),unit:'Nombre'},
+    {key:'location',aliases:['repere localisation','localisation','repere'],el:d.querySelector('.wloc')},
+    {key:'extra',aliases:['dimensions complementaires','cotes complementaires'],el:d.querySelector('.wextra')},
+    {key:'obs',aliases:['observations','observation','remarque'],el:d.querySelector('.wobs'),append:true}
+  ];
+  const entries=common.concat(schema.map(([key,label,unit])=>({key,aliases:voiceAliases(key,label),unit,el:d.querySelector('[data-specific="'+key+'"]')}))).filter(entry=>entry.el);
+  const hits=[];entries.forEach(entry=>entry.aliases.forEach(alias=>{let from=0,index;while((index=text.indexOf(alias,from))>=0){const before=text[index-1],after=text[index+alias.length];if((!before||/[^a-z0-9]/.test(before))&&(!after||/[^a-z0-9]/.test(after)))hits.push({i:index,alias,entry});from=index+alias.length}}));
+  hits.sort((a,b)=>a.i-b.i||b.alias.length-a.alias.length);
+  const unique=[];hits.forEach(hit=>{if(unique.some(item=>item.entry===hit.entry))return;if(unique.some(item=>hit.i>=item.i&&hit.i<item.i+item.alias.length))return;unique.push(hit)});
+  unique.sort((a,b)=>a.i-b.i);let count=0;
+  unique.forEach((hit,index)=>{
+    let value=text.slice(hit.i+hit.alias.length,unique[index+1]?.i??text.length).replace(/^(est|de|du|a|:| )+/,'').replace(/\b(puis|et ensuite)\b.*$/,'').replace(/[,. ]+$/,'').trim();if(!value)return;
+    const {el,unit,append}=hit.entry;
+    if(el.tagName==='SELECT'){if(setSelectByVoice(el,value))count++}
+    else{if(el.inputMode==='decimal'||el.inputMode==='numeric')value=voiceNumber(value,unit);if(value){el.value=append&&el.value?(el.value+' '+value).trim():value;el.dispatchEvent(new Event('input',{bubbles:true}));count++}}
+  });
+  if(count)scheduleAutosave();return count;
 }
 function startFullVoice(d){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur. Utilisez les micros placés à côté de chaque champ.';return}
-  if(recognition)try{recognition.stop()}catch(e){}const btn=d.querySelector('.voice-all');recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;btn.classList.add('listening');$('dictationStatus').textContent='Dictez maintenant toutes les informations de l’ouvrage…';recognition.onresult=e=>{const spoken=e.results[e.results.length-1][0].transcript.trim(),n=fillFromFullVoice(d,spoken);$('dictationStatus').textContent=n?`${n} information(s) répartie(s) dans les champs.`:'Texte ajouté aux observations.'};recognition.onend=()=>btn.classList.remove('listening');recognition.onerror=()=>{$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.';btn.classList.remove('listening')};recognition.start();
+  const btn=d.querySelector('.voice-all');if(btn.classList.contains('listening')&&recognition){recognition.stop();return}if(recognition)try{recognition.stop()}catch(e){}
+  recognition=new SR();recognition.lang='fr-FR';recognition.continuous=true;recognition.interimResults=true;btn.classList.add('listening');btn.textContent='Arrêter la dictée';$('dictationStatus').textContent='Dictez une information, marquez une courte pause, puis continuez.';
+  recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const spoken=e.results[i][0].transcript.trim();if(e.results[i].isFinal){const count=fillVoiceFields(d,spoken);$('dictationStatus').textContent=count?count+' champ(s) rempli(s). Vous pouvez continuer.':'Phrase non reconnue : « '+spoken+' ». Dites par exemple « largeur 1200 ».'}else $('dictationStatus').textContent='Entendu : « '+spoken+'… »'}};
+  recognition.onend=()=>{btn.classList.remove('listening');btn.textContent='Dicter toutes les informations de cet ouvrage';recognition=null};recognition.onerror=e=>{if(e.error!=='no-speech')$('dictationStatus').textContent='La dictée n’a pas pu être utilisée.'};recognition.start();
 }
 function commandText(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/-/g,' ').replace(/\s+/g,' ').trim()}
 function workAtCommand(text){const cards=[...document.querySelectorAll('.work-card')],m=text.match(/ouvrage\s+(\d+)/);if(m)activeWorkIndex=Math.min(cards.length-1,Math.max(0,Number(m[1])-1));return cards[activeWorkIndex]||cards[cards.length-1]}
@@ -327,13 +366,13 @@ async function executeVoiceCommand(spoken){
   if(/creer.*devis|base.*devis/.test(text)){$('makeQuote').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Base de devis créée.';return}
   if(/copier.*resume|copier.*texte/.test(text)){$('copySummary').click();feedback.textContent='✅ Résumé copié.';return}
   const d=workAtCommand(text),type=typeFromCommand(text);if(type&&/type|choisir|mettre|ouvrage/.test(text)){ensurePageForType(type);feedback.textContent=`✅ Page « ${type} » ouverte.`;return}
-  const count=fillFromFullVoice(d,spoken.replace(/^modifier\s+/i,''));if(count){feedback.textContent=`✅ ${count} information(s) modifiée(s) dans l’ouvrage ${activeWorkIndex+1}.`;d.scrollIntoView({behavior:'smooth',block:'center'});return}
-  d.querySelector('.wobs').value=(d.querySelector('.wobs').value+' '+spoken).trim();feedback.textContent=`ℹ️ Commande non identifiée : le texte a été ajouté aux observations de l’ouvrage ${activeWorkIndex+1}.`;
+  const count=fillVoiceFields(d,spoken.replace(/^modifier\s+/i,''));if(count){feedback.textContent=`✅ ${count} information(s) modifiée(s) dans l’ouvrage ${activeWorkIndex+1}.`;d.scrollIntoView({behavior:'smooth',block:'center'});return}
+  feedback.textContent='⚠️ Phrase non reconnue : « '+spoken+' ». Dites le nom du champ puis sa valeur, par exemple « matériau PVC » ou « largeur 1200 ».';
 }
 function startVoiceAssistant(){
   if(voiceControlOn){stopVoiceAssistant();return}if(recognition)try{recognition.stop()}catch(e){}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('voiceFeedback').textContent='La reconnaissance vocale n’est pas disponible dans ce navigateur. Utilisez Chrome ou Safari récent et autorisez le microphone.';return}
   voiceControlOn=true;const btn=$('voiceAssistant');btn.classList.add('listening');btn.textContent='⏹️ Arrêter les commandes vocales';
-  const listen=()=>{if(!voiceControlOn)return;commandRecognition=new SR();commandRecognition.lang='fr-FR';commandRecognition.continuous=false;commandRecognition.interimResults=false;commandRecognition.onstart=()=>{$('voiceFeedback').textContent='🎙️ Je vous écoute…'};commandRecognition.onresult=e=>executeVoiceCommand(e.results[e.results.length-1][0].transcript.trim());commandRecognition.onerror=e=>{if(e.error!=='no-speech')$('voiceFeedback').textContent='La commande n’a pas été comprise. Vous pouvez recommencer.'};commandRecognition.onend=()=>{commandRecognition=null;if(voiceControlOn)setTimeout(listen,500)};try{commandRecognition.start()}catch(e){stopVoiceAssistant('Impossible de démarrer le microphone. Vérifiez son autorisation.')}};listen();
+  const listen=()=>{if(!voiceControlOn)return;commandRecognition=new SR();commandRecognition.lang='fr-FR';commandRecognition.continuous=true;commandRecognition.interimResults=true;commandRecognition.onstart=()=>{$('voiceFeedback').textContent='Je vous écoute. Dictez une information, marquez une courte pause, puis continuez.'};commandRecognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const spoken=e.results[i][0].transcript.trim();if(e.results[i].isFinal)voiceCommandQueue=voiceCommandQueue.then(()=>executeVoiceCommand(spoken)).catch(error=>{console.error('Échec de la commande vocale',error);$('voiceFeedback').textContent='La commande n’a pas pu être appliquée.'});else $('voiceFeedback').textContent='Entendu : « '+spoken+'… »'}};commandRecognition.onerror=e=>{if(e.error!=='no-speech')$('voiceFeedback').textContent='La commande n’a pas été comprise. Vous pouvez recommencer.'};commandRecognition.onend=()=>{commandRecognition=null;if(voiceControlOn)setTimeout(listen,500)};try{commandRecognition.start()}catch(e){stopVoiceAssistant('Impossible de démarrer le microphone. Vérifiez son autorisation.')}};listen();
 }
 function bindMics(root=document){root.querySelectorAll('.mic').forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.onclick=()=>{const t=resolveMicTarget(btn.dataset.target);if(t)startVoice(t,btn)}})}
 $('pageType').innerHTML=opt(workTypes);
@@ -519,3 +558,4 @@ if('serviceWorker' in navigator){
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
 </script>
 </body></html>
+
