@@ -372,7 +372,7 @@ async function exportBackup(){
 }
 function validateBackup(backup){
   if(!backup||backup.format!==BACKUP_FORMAT||backup.version!==BACKUP_VERSION||!Array.isArray(backup.projects))throw new Error('Ce fichier ne correspond pas à une sauvegarde Relevé Chantier compatible.');
-  if(!backup.projects.every(project=>project&&typeof project==='object'&&Number.isFinite(project.id)&&Number.isFinite(project.updated)&&Array.isArray(project.pages)&&Array.isArray(project.photos)))throw new Error('La sauvegarde contient un dossier incomplet ou endommagé.');
+  if(!backup.projects.every(project=>project&&typeof project==='object'&&Number.isFinite(project.id)&&(project.updated===undefined||Number.isFinite(project.updated))&&(project.pages===undefined||Array.isArray(project.pages))&&(project.photos===undefined||Array.isArray(project.photos))))throw new Error('La sauvegarde contient un dossier incomplet ou endommagé.');
 }
 async function importBackupFile(file){
   setBackupStatus('Lecture de la sauvegarde…');
@@ -382,9 +382,9 @@ async function importBackupFile(file){
     const backup=JSON.parse(await file.text());
     validateBackup(backup);
     const newestImported=new Map();
-    backup.projects.forEach(project=>{const previous=newestImported.get(project.id);if(!previous||project.updated>=previous.updated)newestImported.set(project.id,project)});
+    backup.projects.forEach(project=>{const previous=newestImported.get(project.id);if(!previous||(project.updated||0)>=(previous.updated||0))newestImported.set(project.id,project)});
     const existing=await allProjects(),existingById=new Map(existing.map(project=>[project.id,project]));
-    const projectsToWrite=[...newestImported.values()].filter(project=>!existingById.has(project.id)||project.updated>=existingById.get(project.id).updated);
+    const projectsToWrite=[...newestImported.values()].filter(project=>!existingById.has(project.id)||(project.updated||0)>=(existingById.get(project.id).updated||0));
     if(!projectsToWrite.length){setBackupStatus('Aucun dossier plus récent à importer.');return}
     if(!confirm('Importer '+projectsToWrite.length+' dossier(s) ? Les versions les plus récentes seront conservées.')){setBackupStatus('Import annulé.');return}
     const db=await dbOpen();
