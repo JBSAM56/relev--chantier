@@ -1,4 +1,4 @@
-const CACHE_NAME = 'releve-chantier-v20261027-6';
+const CACHE_NAME = 'releve-chantier-v20261027-7';
 const APP_FILES = [
   './',
   './index.html',
@@ -83,4 +83,3 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
