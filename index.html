@@ -268,16 +268,17 @@ function canvasPoint(canvas,e,width=canvas.width,height=canvas.height){
 function initSketch(d){
   const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',noteLine=0,paintVersion=0;
   function refreshSelect(){select.innerHTML=d._sketches.map((_,i)=>`<option value="${i}" ${i===d._activeSketch?'selected':''}>Croquis ${i+1}</option>`).join('')}
-  function point(e){return canvasPoint(c,e,c.clientWidth,c.clientHeight)}
-  function dash(){const style=d.querySelector('.sketch-style').value;return style==='dotted'?[2,7]:style==='dashed'?[12,8]:[]}
-  function stroke(a,b,currentMode=mode){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value);ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
-  function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'',w=c.clientWidth,h=c.clientHeight;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.restore();if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,w,h)};im.src=saved}}
-  function size(){const w=Math.max(280,c.clientWidth),h=c.clientHeight,ratio=Math.max(1,window.devicePixelRatio||1);c.width=w*ratio;c.height=h*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);paintSaved()}
+  function point(e){return canvasPoint(c,e)}
+  function drawingScale(){return ((c.width/Math.max(1,c.clientWidth))+(c.height/Math.max(1,c.clientHeight)))/2}
+  function dash(){const scale=drawingScale(),style=d.querySelector('.sketch-style').value;return style==='dotted'?[2*scale,7*scale]:style==='dashed'?[12*scale,8*scale]:[]}
+  function stroke(a,b,currentMode=mode){const scale=drawingScale();ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=(currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value))*scale;ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
+  function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,c.width,c.height)};im.src=saved}}
+  function size(){const ratio=Math.max(1,window.devicePixelRatio||1);c.width=Math.max(1,Math.round(c.clientWidth*ratio));c.height=Math.max(1,Math.round(c.clientHeight*ratio));paintSaved()}
   function saveSketch(){d._sketches[d._activeSketch]=c.toDataURL('image/png');scheduleAutosave()}
   function setMode(next){mode=next;d.querySelectorAll('.pen,.straight,.eraser').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
   c.onpointerdown=e=>{paintVersion++;drawing=true;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
-  c.onpointermove=e=>{if(!drawing)return;const p=point(e);if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else{stroke(last,p);last=p}e.preventDefault()};
-  c.onpointerup=e=>{if(!drawing)return;const p=point(e);if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last&&Math.abs(last.x-p.x)<1&&Math.abs(last.y-p.y)<1)stroke({x:p.x-.5,y:p.y},p);drawing=false;saveSketch();e.preventDefault()};
+  c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'){const p=point(e);ctx.putImageData(preview,0,0);stroke(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);stroke(last,p);last=p})}e.preventDefault()};
+  c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last&&Math.abs(last.x-p.x)<scale&&Math.abs(last.y-p.y)<scale)stroke({x:p.x-.5*scale,y:p.y},p);drawing=false;saveSketch();e.preventDefault()};
   c.onpointercancel=e=>{if(drawing){if(mode==='straight'&&preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
   d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');d.querySelector('.eraser').onclick=()=>setMode('eraser');
   d.querySelectorAll('.color-swatch').forEach(button=>button.onclick=()=>{color=button.dataset.color;d.querySelectorAll('.color-swatch').forEach(item=>item.classList.toggle('active',item===button))});
@@ -285,7 +286,7 @@ function initSketch(d){
   d.querySelector('.add-sketch').onclick=()=>{d._sketches.push('');d._activeSketch=d._sketches.length-1;refreshSelect();paintSaved();scheduleAutosave()};
   d.querySelector('.remove-sketch').onclick=()=>{if(d._sketches.length===1){alert('Il faut conserver au moins un croquis.');return}if(confirm('Supprimer ce croquis ?')){d._sketches.splice(d._activeSketch,1);d._activeSketch=Math.max(0,d._activeSketch-1);refreshSelect();paintSaved();scheduleAutosave()}};
   d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){d._sketches[d._activeSketch]='';paintSaved();scheduleAutosave()}};
-  d.querySelector('.add-text').onclick=()=>{const t=prompt('Saisir la cote ou la note à ajouter au croquis :');if(!t)return;ctx.fillStyle=color;ctx.font='bold 18px sans-serif';ctx.fillText(t,12,28+(noteLine++%12)*24);saveSketch()};
+  d.querySelector('.add-text').onclick=()=>{const t=prompt('Saisir la cote ou la note à ajouter au croquis :');if(!t)return;const scale=drawingScale();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.fillText(t,12*scale,(28+(noteLine++%12)*24)*scale);saveSketch()};
   refreshSelect();requestAnimationFrame(size);
 }
 function workData(){return [...document.querySelectorAll('.work-card')].map(d=>({
