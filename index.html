@@ -144,7 +144,8 @@ let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,wor
 const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
 const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
-const installs=['','Rénovation','Dépose totale','En tunnel','En applique','En feuillure','Neuf','Autre'];
+const installs=['','Rénovation','Dépose totale','En tunnel','En applique',"Avec tapées d'isolation",'En feuillure','Neuf','Autre'];
+const tapeThicknesses=['','100','120','140','160','180','200','Autre'];
 const specificSchemas={
   'Parquet':[
     ['roomLength','Longueur de la pièce','m','decimal'],['roomWidth','Largeur de la pièce','m','decimal'],['roomArea','Surface calculée / relevée','m²','decimal'],
@@ -161,11 +162,11 @@ const specificSchemas={
     ['headroom','Échappée disponible','mm','decimal'],['startingSpace','Reculement disponible','mm','decimal'],['stringer','Type de limon','À la française|Crémaillère|Central|Sans limon|Autre','select'],
     ['guardrail','Garde-corps / main courante','Description','text'],['stairMaterial','Essence / matériau / finition','Description','text']
   ],
-  'Fenêtre':[['leafCount','Nombre de vantaux','Nombre','numeric'],['opening','Type d’ouverture','Fixe|À la française|Oscillo-battant|Soufflet|Coulissant|Autre','select'],['openingOther','Nature de la configuration','Ex. 2 vantaux et un fixe, avec allège','text'],['frameSize','Dimensions hors-tout','mm','text'],['glazing','Composition du vitrage','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text'],['ventilation','Entrée d’air','Débit / type','text']],
+  'Fenêtre':[['leafCount','Nombre de vantaux','Nombre','numeric'],['opening','Type d’ouverture','Fixe|À la française|Oscillo-battant|Soufflet|Coulissant|Autre','select'],['openingOther','Nature de la configuration','Ex. 2 vantaux et un fixe, avec allège','text'],['glazing','Composition du vitrage','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text'],['ventilation','Entrée d’air','Débit / type','text']],
   "Porte d'entrée":[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Droite tirante|Gauche tirante','select'],['clearPassage','Passage utile','mm','decimal'],['threshold','Type de seuil','PMR 20 mm|Standard|Autre','select'],['lock','Serrure / cylindre / contrôle d’accès','Description','text'],['glazing','Vitrage / panneau / imposte','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
   'Porte intérieure':[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Va-et-vient|Coulissante','select'],['wallThickness','Épaisseur de cloison finie','mm','decimal'],['doorLeaf','Dimensions du vantail','mm','text'],['doorType','Type de porte','Isoplane|Postformée|Stratifiée|Hydrofuge|Coupe-feu|Acoustique|Autre','select'],['hardware','Quincaillerie / serrure','Description','text']],
   'Porte de garage':[['garageType','Type','Sectionnelle plafond|Sectionnelle latérale|Basculante|Enroulable|Battante|Autre','select'],['clearOpening','Baie / passage libre','mm','text'],['headroom','Retombée de linteau','mm','decimal'],['sideRoom','Écoinçons gauche / droite','mm','text'],['motorization','Manœuvre / motorisation','Manuelle|Motorisée radio|Autre','select']],
-  'Baie coulissante':[['leafCount','Nombre de vantaux / rails','Description','text'],['frameSize','Dimensions hors-tout','mm','text'],['glazing','Composition du vitrage','Description','text'],['clearPassage','Passage utile','mm','decimal'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
+  'Baie coulissante':[['leafCount','Nombre de vantaux / rails','Description','text'],['glazing','Composition du vitrage','Description','text'],['clearPassage','Passage utile','mm','decimal'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
   'Volet roulant motorisé':[['boxType','Type de coffre','Rénovation|Traditionnel|Bloc-baie|Tunnel|Existant','select'],['boxSize','Dimensions / accès du coffre','mm','text'],['guides','Coulisses / lame finale','Description','text'],['apron','Tablier : matière, lame, couleur','Description','text'],['motor','Moteur / commande / alimentation','Description','text']],
   'Volet roulant manuel':[['boxType','Type de coffre','Rénovation|Traditionnel|Bloc-baie|Tunnel|Existant','select'],['boxSize','Dimensions / accès du coffre','mm','text'],['operation','Manœuvre','Sangle|Tringle oscillante|Tirage direct|Autre','select'],['apron','Tablier : matière, lame, couleur','Description','text']],
   'Volet bois':[['leafCount','Nombre de vantaux','Nombre','numeric'],['shutterType','Type','Battant|Persienné|Plein|Barres et écharpes|Coulissant|Autre','select'],['hinges','Gonds / arrêts / espagnolette','Description','text'],['woodFinish','Essence et finition','Description','text']],
@@ -215,8 +216,11 @@ function addWork(w={}){
     <div class="mother-wrap ${w.material==='Autre'?'':'hidden'}"><label>Autre matériau</label><div class="field-with-mic"><input class="mother" value="${esc(w.materialOther)}" placeholder="Préciser">${micButton(id+'-materialOther')}</div></div>
     <div><label>Type de pose</label><div class="field-with-mic"><select class="winstall">${opt(installs,w.install)}</select>${micButton(id+'-install')}</div></div>
     <div class="iother-wrap ${w.install==='Autre'?'':'hidden'}"><label>Autre pose</label><div class="field-with-mic"><input class="iother" value="${esc(w.installOther)}" placeholder="Préciser">${micButton(id+'-installOther')}</div></div>
+    <div class="tape-wrap ${w.install==="Avec tapées d'isolation"?'':'hidden'}"><label>Épaisseur des tapées d’isolation</label><div class="field-with-mic"><select class="wtape">${opt(tapeThicknesses,w.tapeThickness)}</select>${micButton(id+'-tapeThickness')}</div></div>
+    <div class="tape-other-wrap ${w.install==="Avec tapées d'isolation"&&w.tapeThickness==='Autre'?'':'hidden'}"><label>Autre épaisseur de tapées</label><div class="field-with-mic"><input class="wtape-other" value="${esc(w.tapeThicknessOther)}" inputmode="decimal" placeholder="mm">${micButton(id+'-tapeThicknessOther')}</div></div>
     <div><label>Largeur</label><div class="field-with-mic"><input class="ww" value="${esc(w.width)}" inputmode="decimal" placeholder="mm">${micButton(id+'-width')}</div></div>
     <div><label>Hauteur</label><div class="field-with-mic"><input class="wh" value="${esc(w.height)}" inputmode="decimal" placeholder="mm">${micButton(id+'-height')}</div></div>
+    <div class="frame-size-wrap hidden" data-specific-wrap="frameSize"><label>Dimensions hors-tout</label><div class="field-with-mic"><input data-specific="frameSize" value="${esc(w.specific?.frameSize)}" inputmode="text" placeholder="Ex. 1230 x 1480 mm">${micButton(id+'-spec_frameSize')}</div></div>
     <div><label>Hauteur d'allège</label><div class="field-with-mic"><input class="wa" value="${esc(w.sill)}" inputmode="decimal" placeholder="mm">${micButton(id+'-sill')}</div></div>
     <div><label>Épaisseur mur / profondeur</label><div class="field-with-mic"><input class="wd" value="${esc(w.depth)}" inputmode="decimal" placeholder="mm">${micButton(id+'-depth')}</div></div>
     <div><label>Quantité</label><div class="field-with-mic"><input class="wq" value="${esc(w.qty||1)}" inputmode="numeric">${micButton(id+'-qty')}</div></div>
@@ -230,7 +234,16 @@ function addWork(w={}){
   </div>`;
   d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave()};
   d.querySelector('.wmaterial').onchange=e=>d.querySelector('.mother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
-  d.querySelector('.winstall').onchange=e=>d.querySelector('.iother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
+  const refreshInstallFields=()=>{
+    const install=d.querySelector('.winstall').value,tape=d.querySelector('.wtape').value,withTape=install==="Avec tapées d'isolation";
+    d.querySelector('.iother-wrap').classList.toggle('hidden',install!=='Autre');
+    d.querySelector('.tape-wrap').classList.toggle('hidden',!withTape);
+    d.querySelector('.tape-other-wrap').classList.toggle('hidden',!withTape||tape!=='Autre');
+    if(install!=='Autre')d.querySelector('.iother').value='';
+    if(!withTape){d.querySelector('.wtape').value='';d.querySelector('.wtape-other').value=''}
+    else if(tape!=='Autre')d.querySelector('.wtape-other').value='';
+  };
+  d.querySelector('.winstall').onchange=refreshInstallFields;d.querySelector('.wtape').onchange=refreshInstallFields;refreshInstallFields();
   d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d);scheduleAutosave()};
   d.querySelector('.voice-all').onclick=()=>startFullVoice(d);
   $('works').appendChild(d);renumberWorks();renderSpecific(d,w.type||'');bindMics(d);renderWorkPhotos(d);initSketch(d);
@@ -238,7 +251,7 @@ function addWork(w={}){
 function renumberWorks(){[...document.querySelectorAll('.work-card')].forEach((d,i)=>d.querySelector('.work-number').textContent=i+1)}
 function specificData(d){const out={};d.querySelectorAll('[data-specific]').forEach(el=>out[el.dataset.specific]=el.value);return out}
 function renderSpecific(d,type){
-  Object.assign(d._specific,specificData(d));const box=d.querySelector('.specific-fields'),schema=specificSchemas[type]||[];box.innerHTML='';box.classList.toggle('hidden',!schema.length);if(!schema.length)return;
+  Object.assign(d._specific,specificData(d));const frameSizeWrap=d.querySelector('.frame-size-wrap'),hasFrameSize=['Fenêtre','Baie coulissante'].includes(type);frameSizeWrap.classList.toggle('hidden',!hasFrameSize);if(!hasFrameSize)frameSizeWrap.querySelector('[data-specific="frameSize"]').value='';const box=d.querySelector('.specific-fields'),schema=specificSchemas[type]||[];box.innerHTML='';box.classList.toggle('hidden',!schema.length);if(!schema.length)return;
   box.innerHTML=`<div class="specific-title">Informations spécifiques — ${esc(type)}</div>`+schema.map(([key,label,choices,kind])=>{
     const value=d._specific[key]||'',target=d.dataset.id+'-spec_'+key;
     const control=kind==='select'?`<select data-specific="${key}"><option value="">Choisir…</option>${choices.split('|').map(x=>`<option ${x===value?'selected':''}>${esc(x)}</option>`).join('')}</select>`:`<input data-specific="${key}" value="${esc(value)}" inputmode="${kind==='decimal'?'decimal':kind==='numeric'?'numeric':'text'}" placeholder="${esc(choices)}">`;
@@ -272,15 +285,16 @@ function initSketch(d){
   refreshSelect();requestAnimationFrame(size);
 }
 function workData(){return [...document.querySelectorAll('.work-card')].map(d=>({
-  type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:d.querySelector('.wobs').value,specific:specificData(d),sketch:d._sketches?.[0]||'',sketches:Array.isArray(d._sketches)?d._sketches:[],photos:Array.isArray(d._photos)?d._photos:[]}))}
+  type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,tapeThickness:d.querySelector('.wtape').value,tapeThicknessOther:d.querySelector('.wtape-other').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:d.querySelector('.wobs').value,specific:specificData(d),sketch:d._sketches?.[0]||'',sketches:Array.isArray(d._sketches)?d._sketches:[],photos:Array.isArray(d._photos)?d._photos:[]}))}
 function shown(v,other){return v==='Autre'?(other||'Autre'):v}
+function tapeThicknessLabel(work){const value=shown(work.tapeThickness,work.tapeThicknessOther);return value&&value!=='Autre'?value+' mm':value}
 function normalize(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
 function setSelectByVoice(sel,text){const n=normalize(text);let best=[...sel.options].find(o=>normalize(o.textContent)===n)||[...sel.options].find(o=>normalize(o.textContent).includes(n)||n.includes(normalize(o.textContent)));if(best){sel.value=best.value;sel.dispatchEvent(new Event('change',{bubbles:true}));return true}return false}
 function resolveMicTarget(key){
   if(!key.includes('-'))return $(key);
   const cut=key.indexOf('-'),id=key.slice(0,cut),field=key.slice(cut+1);const d=document.querySelector(`.work-card[data-id="${id}"]`);if(!d)return null;
   if(field.startsWith('spec_'))return d.querySelector(`[data-specific="${field.slice(5)}"]`);
-  const map={type:'.wtype',other:'.wother',material:'.wmaterial',materialOther:'.mother',install:'.winstall',installOther:'.iother',width:'.ww',height:'.wh',sill:'.wa',depth:'.wd',qty:'.wq',location:'.wloc',extra:'.wextra',obs:'.wobs'};return d.querySelector(map[field]);
+  const map={type:'.wtype',other:'.wother',material:'.wmaterial',materialOther:'.mother',install:'.winstall',installOther:'.iother',tapeThickness:'.wtape',tapeThicknessOther:'.wtape-other',width:'.ww',height:'.wh',sill:'.wa',depth:'.wd',qty:'.wq',location:'.wloc',extra:'.wextra',obs:'.wobs'};return d.querySelector(map[field]);
 }
 function startVoice(target,btn){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur.';return}
@@ -304,6 +318,8 @@ function fillVoiceFields(d,spoken){
   const common=[
     {key:'material',aliases:['materiau','matiere'],el:d.querySelector('.wmaterial')},
     {key:'install',aliases:installAliases,el:d.querySelector('.winstall')},
+    {key:'tapeThickness',aliases:['epaisseur des tapees','epaisseur tapees','tapees isolation'],el:d.querySelector('.wtape')},
+    {key:'tapeThicknessOther',aliases:['autre epaisseur de tapees'],el:d.querySelector('.wtape-other'),unit:'mm'},
     {key:'width',aliases:['largeur hors tout','largeur'],el:d.querySelector('.ww'),unit:'mm'},
     {key:'height',aliases:['hauteur hors tout','hauteur'],el:d.querySelector('.wh'),unit:'mm'},
     {key:'sill',aliases:['hauteur allege','allege'],el:d.querySelector('.wa'),unit:'mm'},
@@ -402,7 +418,7 @@ function renderPhotos(){const g=$('photoGrid');g.innerHTML='';photoData.forEach(
 function projectPagesData(){captureActivePage();return pages.map(page=>({...page,works:(page.works||[]).map(w=>({...w,type:page.type,other:page.other}))}))}
 function baseLines(){
   let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);const supplierNames=[...new Set([$('supplier').value,...suppliers].filter(Boolean))];if(supplierNames.length)lines.push(`Fabricants / fournisseurs : ${supplierNames.join(', ')}`);
-  projectPagesData().forEach((page,pageIndex)=>{lines.push('',`PAGE ${pageIndex+1} — ${shown(page.type,page.other)||'Type non renseigné'}`);page.works.forEach((w,i)=>{lines.push(`Ouvrage ${i+1}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[page.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);{const sketchCount=Array.isArray(w.sketches)?w.sketches.filter(Boolean).length:(w.sketch?1:0);if(sketchCount)lines.push(`Croquis associés : ${sketchCount}`)}})});
+  projectPagesData().forEach((page,pageIndex)=>{lines.push('',`PAGE ${pageIndex+1} — ${shown(page.type,page.other)||'Type non renseigné'}`);page.works.forEach((w,i)=>{lines.push(`Ouvrage ${i+1}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.install==="Avec tapées d'isolation"&&w.tapeThickness)lines.push(`Épaisseur des tapées : ${tapeThicknessLabel(w)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.specific?.frameSize)lines.push(`Dimensions hors-tout : ${w.specific.frameSize}`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[page.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);{const sketchCount=Array.isArray(w.sketches)?w.sketches.filter(Boolean).length:(w.sketch?1:0);if(sketchCount)lines.push(`Croquis associés : ${sketchCount}`)}})});
   if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines;
 }
 function renderSuppliers(){const box=$('supplierList'),options=$('supplierOptions');box.innerHTML='';options.innerHTML=suppliers.map(name=>`<option value="${esc(name)}"></option>`).join('');suppliers.forEach((name,index)=>{const item=document.createElement('div'),label=document.createElement('span'),remove=document.createElement('button');item.className='supplier-item';label.textContent=name;remove.type='button';remove.className='danger';remove.textContent='×';remove.setAttribute('aria-label','Supprimer '+name);remove.onclick=()=>{suppliers.splice(index,1);renderSuppliers();scheduleAutosave()};item.append(label,remove);box.appendChild(item)})}
@@ -469,8 +485,8 @@ async function downloadProjectPdf(){
       const page=pdfPages[pageIndex];section('Page '+(pageIndex+1)+' - '+(shown(page.type,page.other)||'Type non renseigné'));
       for(let workIndex=0;workIndex<(page.works||[]).length;workIndex++){
         const work=page.works[workIndex];workHeading('Ouvrage '+(workIndex+1)+(work.location?' - '+work.location:''));
-        field('Matériau',shown(work.material,work.materialOther));field('Type de pose',shown(work.install,work.installOther));
-        if(work.width||work.height)field('Dimensions',(work.width||'-')+' x '+(work.height||'-'),'mm');
+        field('Matériau',shown(work.material,work.materialOther));field('Type de pose',shown(work.install,work.installOther));if(work.install==="Avec tapées d'isolation")field('Épaisseur des tapées',tapeThicknessLabel(work));
+        if(work.width||work.height)field('Dimensions',(work.width||'-')+' x '+(work.height||'-'),'mm');field('Dimensions hors-tout',work.specific?.frameSize);
         field("Hauteur d'allège",work.sill,'mm');field('Épaisseur / profondeur',work.depth,'mm');field('Quantité',work.qty);field('Repère / localisation',work.location);
         (specificSchemas[page.type]||[]).forEach(([key,label,unit])=>field(label,work.specific?.[key],unit));
         field('Cotes complémentaires',work.extra);field('Observations',work.obs);
@@ -609,7 +625,15 @@ async function persistProject(notify=false){
     isSaving=false;if(changeVersion>lastSavedVersion)autoSaveTimer=setTimeout(()=>persistProject(false),300);
   }
 }
-function save(){return persistProject(true)}
+async function save(){
+  const currentTitle=$('projectTitle').value.trim(),client=$('contactName').value.trim(),suggested=currentTitle||['Chantier',client].filter(Boolean).join(' - ');
+  const checkedTitle=prompt('Vérifiez le titre du document (référence chantier / client). Vous pouvez le modifier avant l’enregistrement :',suggested);
+  if(checkedTitle===null)return;
+  const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
+  if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
+  while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
+  return persistProject(true);
+}
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
 async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
 function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.measures?.length){const m=x.measures?.[0]||{};return[{type:x.workType||'',other:x.workOther||'',material:x.material||'',materialOther:x.materialOther||'',install:x.installType||'',installOther:x.installOther||'',width:m.w||'',height:m.h||'',extra:(x.measures||[]).slice(1).map(a=>`${a.label||'Dimension'} : ${a.w||''}${a.h?' x '+a.h:''} ${a.u||'mm'}`).join('\n')}]}return[{}]}
