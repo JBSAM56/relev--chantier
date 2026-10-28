@@ -1,4 +1,4 @@
-const CACHE_NAME = 'releve-chantier-v20261028-4';
+const CACHE_NAME = 'releve-chantier-v20261028-5';
 const APP_FILES = [
   './',
   './index.html',
@@ -19,7 +19,6 @@ self.addEventListener('install', event => {
     )
   );
 });
-
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
