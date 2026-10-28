@@ -40,11 +40,12 @@
   <section class="card">
     <h2>Projet / Client</h2>
     <div class="grid">
-      <div><label>Nom du projet / chantier</label><div class="field-with-mic"><input id="projectTitle" placeholder="Ex. Remplacement porte d'entrée" /><button class="mic" data-target="projectTitle" type="button">🎙️</button></div></div>
+      <div><label>Titre du chantier (automatique)</label><input id="projectTitle" readonly placeholder="Nom du client - Ville / commune" /></div>
       <div><label>Date</label><input id="projectDate" type="date" /></div>
       <div><label>Client / contact</label><div class="field-with-mic"><input id="contactName" placeholder="Nom du client" /><button class="mic" data-target="contactName" type="button">🎙️</button></div></div>
       <div><label>Téléphone</label><div class="field-with-mic"><input id="contactPhone" type="tel" placeholder="06 ..." /><button class="mic" data-target="contactPhone" type="button">🎙️</button></div></div>
       <div class="full"><label>E-mail</label><div class="field-with-mic"><input id="contactEmail" type="email" placeholder="client@exemple.fr" /><button class="mic" data-target="contactEmail" type="button">🎙️</button></div></div>
+      <div class="full"><label>Ville / commune</label><div class="field-with-mic"><input id="city" placeholder="Ex. Vannes" /><button class="mic" data-target="city" type="button">🎙️</button></div></div>
       <div class="full"><label>Adresse du chantier</label><div class="field-with-mic"><textarea id="address" placeholder="Adresse, accès, contraintes de stationnement..."></textarea><button class="mic" data-target="address" type="button">🎙️</button></div></div>
     </div>
   </section>
@@ -56,7 +57,7 @@
     <details><summary class="hint" style="cursor:pointer;margin-top:9px">Voir des exemples de commandes</summary><div class="command-list">
       « Enregistrer le chantier » • « Nouvelle page parquet » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
       « Longueur pièce 5 mètres, largeur pièce 4 mètres, type parquet contrecollé » • « Hauteur à monter 2 800 millimètres, largeur trémie 900 »<br>
-      « Nom du chantier Madame Martin » • « Client Monsieur Dupont » • « Adresse 10 rue… » • « Notes chantier accès difficile »<br>
+      « Client Monsieur Dupont » • « Ville Vannes » • « Adresse 10 rue… » • « Notes chantier accès difficile »<br>
       « Créer la demande de prix » • « Créer le devis » • « Ouvrir le chantier Dupont » • « Nouveau chantier » • « Arrêter l’assistant »
     </div></details>
   </section>
@@ -141,7 +142,7 @@
 <script>
 const $=id=>document.getElementById(id);
 let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,workCounter=0,commandRecognition=null,voiceCommandQueue=Promise.resolve(),voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false,photoEditorState=null;
-const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
+const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','city','address','notes','supplier','hardwareRef','hardwareNeed'];
 const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
 const installs=['','Rénovation','Dépose totale','En tunnel','En applique',"Avec tapées d'isolation",'En feuillure','Neuf','Autre'];
@@ -371,10 +372,10 @@ async function executeVoiceCommand(spoken){
   if(/ajoute|ajouter|nouvel ouvrage|nouveau ouvrage/.test(text)){const type=typeFromCommand(text);if(type&&pages[activePageIndex]?.type!==type)ensurePageForType(type);addWork({type:pages[activePageIndex]?.type||type});captureActivePage();renderPageTabs();scheduleAutosave();activeWorkIndex=document.querySelectorAll('.work-card').length-1;feedback.textContent=`✅ Ouvrage ${pages[activePageIndex]?.type||'sans type'} ajouté sur la page ${activePageIndex+1}.`;document.querySelectorAll('.work-card')[activeWorkIndex].scrollIntoView({behavior:'smooth',block:'start'});return}
   if(/supprime|supprimer/.test(text)&&text.includes('ouvrage')){const cards=[...document.querySelectorAll('.work-card')];if(cards.length===1){feedback.textContent='⚠️ Il faut conserver au moins un ouvrage.';return}let d=text.includes('dernier')?cards[cards.length-1]:workAtCommand(text);if(d&&confirm(`Supprimer l’ouvrage ${cards.indexOf(d)+1} ?`)){d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave();activeWorkIndex=Math.min(activeWorkIndex,cards.length-2);feedback.textContent='✅ Ouvrage supprimé.'}return}
   if(/modifier|selectionne|selectionner|aller a/.test(text)&&text.includes('ouvrage')){const d=workAtCommand(text);if(d){activeWorkIndex=[...document.querySelectorAll('.work-card')].indexOf(d);d.scrollIntoView({behavior:'smooth',block:'start'});feedback.textContent=`✅ Les prochaines modifications concernent l’ouvrage ${activeWorkIndex+1}.`;if(!/(largeur|hauteur|longueur|epaisseur|surface|type|pose|giron|reculement|quantite|localisation|observation)/.test(text))return}}
-  if(setSimpleVoiceField('projectTitle',text,['nom du chantier','titre du chantier'])){feedback.textContent='✅ Nom du chantier renseigné.';return}
   if(setSimpleVoiceField('contactName',text,['nom du client','client','contact'])){feedback.textContent='✅ Client renseigné.';return}
   if(setSimpleVoiceField('contactPhone',text,['telephone','numero de telephone'])){feedback.textContent='✅ Téléphone renseigné.';return}
   if(setSimpleVoiceField('contactEmail',text,['adresse mail','email','mail'])){feedback.textContent='✅ E-mail renseigné.';return}
+  if(setSimpleVoiceField('city',text,['ville du chantier','ville','commune'])){feedback.textContent='✅ Ville / commune renseignée.';return}
   if(setSimpleVoiceField('address',text,['adresse du chantier','adresse'])){feedback.textContent='✅ Adresse renseignée.';return}
   if(setSimpleVoiceField('notes',text,['notes chantier','note chantier','notes generales'])){feedback.textContent='✅ Notes générales renseignées.';return}
   if(/creer.*demande.*prix|demande.*fournisseur/.test(text)){$('makeSupplier').click();$('summary').scrollIntoView({behavior:'smooth'});feedback.textContent='✅ Demande de prix créée.';return}
@@ -610,8 +611,15 @@ function scheduleAutosave(){
   changeVersion++;setSaveState('dirty');clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(()=>persistProject(false),900);
 }
+function generatedProjectTitle(){
+  const client=$('contactName').value.trim(),city=$('city').value.trim();
+  return client&&city?client+' - '+city:'';
+}
+function applyGeneratedProjectTitle(){
+  const title=generatedProjectTitle();if(title)$('projectTitle').value=title;return title;
+}
 async function persistProject(notify=false){
-  clearTimeout(autoSaveTimer);
+  clearTimeout(autoSaveTimer);applyGeneratedProjectTitle();
   const savedPages=projectPagesData(),versionToSave=changeVersion;
   if(!notify&&!hasProjectContent(savedPages)){lastSavedVersion=changeVersion;setSaveState('idle');return}
   if(isSaving){autoSaveTimer=setTimeout(()=>persistProject(false),300);return}
@@ -630,11 +638,9 @@ async function persistProject(notify=false){
   }
 }
 async function save(){
-  const currentTitle=$('projectTitle').value.trim(),client=$('contactName').value.trim(),suggested=currentTitle||['Chantier',client].filter(Boolean).join(' - ');
-  const checkedTitle=prompt('Vérifiez le titre du document (référence chantier / client). Vous pouvez le modifier avant l’enregistrement :',suggested);
-  if(checkedTitle===null)return;
-  const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
-  if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
+  if(!$('contactName').value.trim()){alert('Indiquez le nom du client avant d’enregistrer.');$('contactName').focus();return}
+  if(!$('city').value.trim()){alert('Indiquez la ville ou la commune avant d’enregistrer.');$('city').focus();return}
+  applyGeneratedProjectTitle();
   while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
   return persistProject(true);
 }
