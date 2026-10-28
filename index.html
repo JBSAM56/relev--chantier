@@ -113,11 +113,11 @@
     <h2>Mes projets enregistrés</h2>
     <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
     <div class="row" style="margin-top:12px">
-      <button class="secondary" id="exportBackup" type="button">Exporter vers iPad / PC</button>
+      <button class="secondary" id="exportBackup" type="button">Exporter tous les relevés</button>
       <label class="file-picker ghost" for="backupFile">Ouvrir un fichier de relevés</label>
     </div>
     <input class="file-input" id="backupFile" type="file" accept="application/json,.json" />
-    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le. Il contient tous les dossiers, photos et croquis.</div>
+    <div class="hint">À chaque enregistrement manuel, l’application propose aussi de choisir un dossier dans kDrive. Utilisez « Relevés de cotes iPad » ou « Projets appel d’offres ». Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le : il contient les données, photos et croquis.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
   </section>
 </main>
@@ -539,6 +539,23 @@ function downloadBackupFile(file){
   link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+function projectBackupFile(project){
+  const exportedAt=new Date().toISOString(),date=project.projectDate||exportedAt.slice(0,10);
+  const title=(project.projectTitle||'nouveau-releve').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'nouveau-releve';
+  const backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
+  return new File([JSON.stringify(backup)],'Releve-de-cotes-iPad_'+date+'_'+title+'.json',{type:'application/json'});
+}
+async function shareProjectBackup(project){
+  const file=projectBackupFile(project);
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({title:'Enregistrer dans kDrive',text:'Choisissez le dossier « Relevés de cotes iPad » ou « Projets appel d’offres ».',files:[file]});
+      return 'shared';
+    }catch(error){if(error?.name==='AbortError')return 'cancelled';throw error}
+  }
+  downloadBackupFile(file);
+  return 'downloaded';
+}
 async function exportBackup(){
   setBackupStatus('Préparation de la sauvegarde…');
   try{
@@ -630,9 +647,11 @@ async function persistProject(notify=false){
     await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
     lastSavedVersion=Math.max(lastSavedVersion,versionToSave);setSaveState(changeVersion>lastSavedVersion?'dirty':'saved');await renderProjects();
     if(notify)alert('Chantier et pages enregistrés sur cet appareil.');
+    return data;
   }catch(error){
     console.error('Échec de l’enregistrement',error);setSaveState('error');
     if(notify)alert('L’enregistrement a échoué. Vérifiez l’espace disponible, puis réessayez.');
+    return null;
   }finally{
     isSaving=false;if(changeVersion>lastSavedVersion)autoSaveTimer=setTimeout(()=>persistProject(false),300);
   }
@@ -644,7 +663,19 @@ async function save(){
   const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
   if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
   while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
-  return persistProject(true);
+  const project=await persistProject(false);
+  if(!project){alert('L’enregistrement a échoué. Vérifiez l’espace disponible, puis réessayez.');return}
+  if(!confirm('Le relevé est enregistré sur cet iPad.\n\nChoisir maintenant son dossier dans kDrive ?\n\n• Relevés de cotes iPad\n• Projets appel d’offres'))return project;
+  try{
+    const result=await shareProjectBackup(project);
+    if(result==='shared')alert('Le relevé a été envoyé vers le dossier choisi.');
+    else if(result==='downloaded')alert('Le fichier du relevé a été téléchargé. Vous pouvez le déplacer dans kDrive.');
+    else alert('Partage annulé. Le relevé reste enregistré sur cet iPad.');
+  }catch(error){
+    console.error('Échec du partage du relevé',error);
+    alert('Le relevé est bien enregistré sur cet iPad, mais son envoi vers kDrive a échoué. Réessayez avec « Exporter tous les relevés ».');
+  }
+  return project;
 }
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
 async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
@@ -674,4 +705,5 @@ if('serviceWorker' in navigator){
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
 </script>
 </body></html>
+
 
