@@ -117,7 +117,8 @@
       <label class="file-picker ghost" for="backupFile">Ouvrir un fichier de relevés</label>
     </div>
     <input class="file-input" id="backupFile" type="file" accept="application/json,.json" />
-    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le. Il contient tous les dossiers, photos et croquis.</div>
+    <div class="hint">Sur iPad, le bouton « Enregistrer » crée aussi un fichier complet du relevé. Dans la feuille de partage, choisissez « Enregistrer dans Fichiers », puis kDrive et le dossier « Relevés de cote iPad » ou « Projets appel d’offres ». Ces dossiers doivent être créés une première fois dans kDrive.</div>
+    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le. Il contient le relevé, ses photos et ses croquis.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
   </section>
 </main>
@@ -539,6 +540,28 @@ function downloadBackupFile(file){
   link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+function backupFilePart(value){
+  return String(value||'sans-titre').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,70)||'sans-titre';
+}
+async function shareProjectBackup(project){
+  const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
+  const stamp=exportedAt.replace(/\.\d{3}Z$/,'Z').replace(/[:T]/g,'-');
+  const name='releve-de-cote-'+backupFilePart(project.projectTitle)+'-'+stamp+'.json';
+  const file=new File([JSON.stringify(backup)],name,{type:'application/json'});
+  setBackupStatus('Relevé enregistré sur cet appareil. Choisissez maintenant Fichiers, puis kDrive.');
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({title:'Relevé de cote - '+project.projectTitle,files:[file]});
+      setBackupStatus('Relevé partagé. Dans Fichiers, classez-le dans « Relevés de cote iPad » ou « Projets appel d’offres ».');
+      return;
+    }catch(error){
+      if(error?.name==='AbortError'){setBackupStatus('Relevé enregistré sur cet appareil. Enregistrement dans kDrive annulé.');return}
+      console.warn('Partage du relevé indisponible, téléchargement utilisé',error);
+    }
+  }
+  downloadBackupFile(file);
+  setBackupStatus('Fichier créé : '+name+'. Vous pouvez le déplacer dans kDrive.');
+}
 async function exportBackup(){
   setBackupStatus('Préparation de la sauvegarde…');
   try{
@@ -630,6 +653,7 @@ async function persistProject(notify=false){
     await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
     lastSavedVersion=Math.max(lastSavedVersion,versionToSave);setSaveState(changeVersion>lastSavedVersion?'dirty':'saved');await renderProjects();
     if(notify)alert('Chantier et pages enregistrés sur cet appareil.');
+    return data;
   }catch(error){
     console.error('Échec de l’enregistrement',error);setSaveState('error');
     if(notify)alert('L’enregistrement a échoué. Vérifiez l’espace disponible, puis réessayez.');
@@ -644,7 +668,8 @@ async function save(){
   const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
   if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
   while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
-  return persistProject(true);
+  const project=await persistProject(false);
+  if(project)await shareProjectBackup(project);
 }
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
 async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
