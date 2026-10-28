@@ -117,7 +117,8 @@
       <label class="file-picker ghost" for="backupFile">Ouvrir un fichier de relevés</label>
     </div>
     <input class="file-input" id="backupFile" type="file" accept="application/json,.json" />
-    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le. Il contient tous les dossiers, photos et croquis.</div>
+    <div class="hint"><strong>Copie kDrive :</strong> après avoir touché « Enregistrer », choisissez kDrive puis le dossier « Projets appel d’offres / Relevés de cotes iPad ». Chaque fichier contient le relevé courant avec ses photos et croquis.</div>
+    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
   </section>
 </main>
@@ -539,6 +540,34 @@ function downloadBackupFile(file){
   link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+function projectBackupFileName(project,exportedAt){
+  const raw=project.projectTitle||project.contactName||'releve-de-cotes';
+  const base=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'releve-de-cotes';
+  const stamp=exportedAt.replace(/[-:]/g,'').replace('T','-').slice(0,15);
+  return 'releve-de-cotes-'+base+'-'+stamp+'.json';
+}
+async function shareCurrentProjectBackup(){
+  const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
+  if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
+  const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
+  const file=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'});
+  setBackupStatus('Choisissez kDrive puis « Projets appel d’offres / Relevés de cotes iPad ».');
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files:[file]});
+      setBackupStatus('Relevé enregistré sur cet appareil et copie envoyée vers la destination choisie.');
+    }catch(error){
+      if(error?.name==='AbortError'){
+        setBackupStatus('Relevé enregistré sur cet appareil. Copie vers kDrive annulée.');
+        return;
+      }
+      throw error;
+    }
+  }else{
+    downloadBackupFile(file);
+    setBackupStatus('Relevé enregistré sur cet appareil. Fichier téléchargé : '+file.name);
+  }
+}
 async function exportBackup(){
   setBackupStatus('Préparation de la sauvegarde…');
   try{
@@ -621,8 +650,8 @@ function scheduleAutosave(){
 async function persistProject(notify=false){
   clearTimeout(autoSaveTimer);
   const savedPages=projectPagesData(),versionToSave=changeVersion;
-  if(!notify&&!hasProjectContent(savedPages)){lastSavedVersion=changeVersion;setSaveState('idle');return}
-  if(isSaving){autoSaveTimer=setTimeout(()=>persistProject(false),300);return}
+  if(!notify&&!hasProjectContent(savedPages)){lastSavedVersion=changeVersion;setSaveState('idle');return false}
+  if(isSaving){autoSaveTimer=setTimeout(()=>persistProject(false),300);return false}
   isSaving=true;setSaveState('saving');
   try{
     const db=await dbOpen(),data={id:currentId||Date.now(),updated:Date.now(),photos:photoData,suppliers:[...suppliers],pages:savedPages,works:savedPages.flatMap(p=>p.works)};
@@ -630,9 +659,11 @@ async function persistProject(notify=false){
     await new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(data);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});
     lastSavedVersion=Math.max(lastSavedVersion,versionToSave);setSaveState(changeVersion>lastSavedVersion?'dirty':'saved');await renderProjects();
     if(notify)alert('Chantier et pages enregistrés sur cet appareil.');
+    return true;
   }catch(error){
     console.error('Échec de l’enregistrement',error);setSaveState('error');
     if(notify)alert('L’enregistrement a échoué. Vérifiez l’espace disponible, puis réessayez.');
+    return false;
   }finally{
     isSaving=false;if(changeVersion>lastSavedVersion)autoSaveTimer=setTimeout(()=>persistProject(false),300);
   }
@@ -644,7 +675,14 @@ async function save(){
   const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
   if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
   while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
-  return persistProject(true);
+  const saved=await persistProject(false);
+  if(!saved)return;
+  try{
+    await shareCurrentProjectBackup();
+  }catch(error){
+    console.error("Échec de la copie externe",error);
+    setBackupStatus("Le relevé est enregistré sur cet appareil, mais la copie vers kDrive a échoué : "+(error.message||"erreur inconnue"),true);
+  }
 }
 async function allProjects(){const db=await dbOpen();return new Promise((res,rej)=>{const r=db.transaction('projects').objectStore('projects').getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.updated-a.updated));r.onerror=()=>rej(r.error)})}
 async function renderProjects(){const p=await allProjects(),box=$('projectList');box.innerHTML='';if(!p.length){box.innerHTML='<span class="hint">Aucun projet enregistré.</span>';return}p.forEach(x=>{const d=document.createElement('div');d.style='padding:10px 0;border-bottom:1px solid #e5e7eb';const projectPages=normalizePages(x),count=projectPages.reduce((n,page)=>n+(page.works?.length||0),0),types=projectPages.map(page=>shown(page.type,page.other)).filter(Boolean).join(', ');d.innerHTML=`<strong>${esc(x.projectTitle||'Projet sans titre')}</strong><br><span class="hint">${esc(x.contactName||'')} • ${projectPages.length} page(s) • ${count} ouvrage(s)${types?' • '+esc(types):''}</span><div class="row" style="margin-top:6px"><button class="secondary">Ouvrir</button><button class="danger">Supprimer</button></div>`;const [openBtn,delBtn]=d.querySelectorAll('button');openBtn.onclick=()=>loadProject(x);delBtn.onclick=async()=>{if(confirm('Supprimer ce projet ?')){const db=await dbOpen();db.transaction('projects','readwrite').objectStore('projects').delete(x.id);renderProjects()}};box.appendChild(d)})}
