@@ -19,6 +19,7 @@ self.addEventListener('install', event => {
     )
   );
 });
+
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
@@ -32,6 +33,7 @@ self.addEventListener('activate', event => {
       .then(() => self.clients.claim())
   );
 });
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
