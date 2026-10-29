@@ -113,12 +113,12 @@
     <h2>Mes projets enregistrés</h2>
     <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
     <div class="row" style="margin-top:12px">
-      <button class="secondary" id="exportBackup" type="button">Exporter vers iPad / PC</button>
+      <button class="secondary" id="exportBackup" type="button">Enregistrement kDrive</button>
       <label class="file-picker ghost" for="backupFile">Ouvrir un fichier de relevés</label>
     </div>
     <input class="file-input" id="backupFile" type="file" accept="application/json,.json" />
-    <div class="hint"><strong>Copie kDrive :</strong> après avoir touché « Enregistrer », choisissez kDrive puis le dossier « Projets appel d’offres / Relevés de cotes iPad ». Chaque fichier contient le relevé courant avec ses photos et croquis.</div>
-    <div class="hint">Pour rouvrir un fichier enregistré dans Fichiers, touchez « Ouvrir un fichier de relevés » puis sélectionnez-le.</div>
+    <div class="hint"><strong>Enregistrement kDrive :</strong> le PDF et le fichier de l’application sont proposés ensemble. Sur iPad, choisissez « Enregistrer dans Fichiers », puis kDrive et le dossier « Relevés de cotes ».</div>
+    <div class="hint">Le fichier JSON permet de rouvrir et modifier le relevé avec ses photos et croquis.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
   </section>
 </main>
@@ -230,7 +230,7 @@ function addWork(w={}){
     <div class="full"><label>Observations sur l'ouvrage</label><div class="field-with-mic"><textarea class="wobs" placeholder="Finition, couleur, sens d'ouverture, vitrage, occultation, contraintes...">${esc(w.obs)}</textarea>${micButton(id+'-obs')}</div></div>
     <button class="voice-all" type="button">🎙️ Dicter toutes les informations de cet ouvrage</button>
     <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres », puis « largeur pièce 3 virgule 8 », puis « type parquet contrecollé ». Les champs sont remplis après chaque courte pause.</div>
-    <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button">T Note / cote</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">Chaque ouvrage peut contenir plusieurs croquis. Le mode « Ligne droite » redresse automatiquement le trait.</div></div>
+    <div class="sketch-wrap"><label>Croquis et cotes au doigt</label><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button" title="Ajouter une cote ou un texte propre">T Lettre / cote</button><button class="ghost undo-sketch" type="button" title="Annuler la dernière action">↶ Retour</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">« Lettre / cote » écrit proprement le texte à l’endroit touché. « Retour » annule le dernier trait, texte ou effacement.</div></div>
     <div class="full"><label>Photos de cet ouvrage</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Prendre une ou plusieurs photos liées à cet ouvrage. Touchez ensuite « Enregistrer » pour les ajouter aussi à Photos sur l’iPad ou l’iPhone.</div><div class="photo-grid wphoto-grid"></div></div>
   </div>`;
   d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave()};
@@ -267,7 +267,8 @@ function canvasPoint(canvas,e,width=canvas.width,height=canvas.height){
   return{x:(e.clientX-rect.left-borderLeft)*width/contentWidth,y:(e.clientY-rect.top-borderTop)*height/contentHeight};
 }
 function initSketch(d){
-  const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',noteLine=0,paintVersion=0,dashDistance=0;
+  const c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select'),textButton=d.querySelector('.add-text');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',pendingText='',paintVersion=0,dashDistance=0;
+  const sketchHistory=d._sketches.map(saved=>[saved||'']);
   function refreshSelect(){select.innerHTML=d._sketches.map((_,i)=>`<option value="${i}" ${i===d._activeSketch?'selected':''}>Croquis ${i+1}</option>`).join('')}
   function point(e){return canvasPoint(c,e)}
   function drawingScale(){return ((c.width/Math.max(1,c.clientWidth))+(c.height/Math.max(1,c.clientHeight)))/2}
@@ -275,19 +276,22 @@ function initSketch(d){
   function stroke(a,b,currentMode=mode,offset=0){const scale=drawingScale(),distance=Math.hypot(b.x-a.x,b.y-a.y);ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=(currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value))*scale;ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.lineDashOffset=-offset;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();return distance}
   function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,c.width,c.height)};im.src=saved}}
   function size(){const ratio=Math.max(1,window.devicePixelRatio||1);c.width=Math.max(1,Math.round(c.clientWidth*ratio));c.height=Math.max(1,Math.round(c.clientHeight*ratio));paintSaved()}
-  function saveSketch(){d._sketches[d._activeSketch]=c.toDataURL('image/png');scheduleAutosave()}
-  function setMode(next){mode=next;d.querySelectorAll('.pen,.straight,.eraser').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
-  c.onpointerdown=e=>{paintVersion++;drawing=true;dashDistance=0;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
+  function currentHistory(){return sketchHistory[d._activeSketch]||(sketchHistory[d._activeSketch]=[d._sketches[d._activeSketch]||''])}
+  function recordSnapshot(data){d._sketches[d._activeSketch]=data;const history=currentHistory();if(history[history.length-1]!==data)history.push(data);if(history.length>16)history.shift();scheduleAutosave()}
+  function saveSketch(){recordSnapshot(c.toDataURL('image/png'))}
+  function setMode(next){mode=next;pendingText='';d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
+  c.onpointerdown=e=>{paintVersion++;if(pendingText){const p=point(e),scale=drawingScale();ctx.save();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.textBaseline='bottom';ctx.fillText(pendingText,p.x,Math.max(20*scale,p.y));ctx.restore();pendingText='';textButton.classList.remove('tool-active');d.querySelector('.'+mode).classList.add('tool-active');saveSketch();e.preventDefault();return}drawing=true;dashDistance=0;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
   c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'){const p=point(e);ctx.putImageData(preview,0,0);stroke(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);dashDistance+=stroke(last,p,mode,dashDistance);last=p})}e.preventDefault()};
   c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last){const distance=Math.hypot(p.x-last.x,p.y-last.y);if(distance>0)dashDistance+=stroke(last,p,mode,dashDistance);else if(dashDistance===0)stroke({x:p.x-.5*scale,y:p.y},p,mode,0)}drawing=false;saveSketch();e.preventDefault()};
   c.onpointercancel=e=>{if(drawing){if(mode==='straight'&&preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
   d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');d.querySelector('.eraser').onclick=()=>setMode('eraser');
   d.querySelectorAll('.color-swatch').forEach(button=>button.onclick=()=>{color=button.dataset.color;d.querySelectorAll('.color-swatch').forEach(item=>item.classList.toggle('active',item===button))});
-  select.onchange=()=>{d._activeSketch=Number(select.value);noteLine=0;paintSaved()};
-  d.querySelector('.add-sketch').onclick=()=>{d._sketches.push('');d._activeSketch=d._sketches.length-1;refreshSelect();paintSaved();scheduleAutosave()};
-  d.querySelector('.remove-sketch').onclick=()=>{if(d._sketches.length===1){alert('Il faut conserver au moins un croquis.');return}if(confirm('Supprimer ce croquis ?')){d._sketches.splice(d._activeSketch,1);d._activeSketch=Math.max(0,d._activeSketch-1);refreshSelect();paintSaved();scheduleAutosave()}};
-  d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){d._sketches[d._activeSketch]='';paintSaved();scheduleAutosave()}};
-  d.querySelector('.add-text').onclick=()=>{const t=prompt('Saisir la cote ou la note à ajouter au croquis :');if(!t)return;const scale=drawingScale();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.fillText(t,12*scale,(28+(noteLine++%12)*24)*scale);saveSketch()};
+  select.onchange=()=>{d._activeSketch=Number(select.value);pendingText='';textButton.classList.remove('tool-active');paintSaved()};
+  d.querySelector('.add-sketch').onclick=()=>{d._sketches.push('');sketchHistory.push(['']);d._activeSketch=d._sketches.length-1;refreshSelect();paintSaved();scheduleAutosave()};
+  d.querySelector('.remove-sketch').onclick=()=>{if(d._sketches.length===1){alert('Il faut conserver au moins un croquis.');return}if(confirm('Supprimer ce croquis ?')){d._sketches.splice(d._activeSketch,1);sketchHistory.splice(d._activeSketch,1);d._activeSketch=Math.max(0,d._activeSketch-1);refreshSelect();paintSaved();scheduleAutosave()}};
+  d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){recordSnapshot('');paintSaved()}};
+  textButton.onclick=()=>{const text=prompt('Saisir la cote ou la lettre à ajouter :');if(!text?.trim())return;pendingText=text.trim();d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));textButton.classList.add('tool-active')};
+  d.querySelector('.undo-sketch').onclick=()=>{const history=currentHistory();if(history.length<=1)return;history.pop();d._sketches[d._activeSketch]=history[history.length-1];pendingText='';textButton.classList.remove('tool-active');paintSaved();scheduleAutosave()};
   refreshSelect();requestAnimationFrame(size);
 }
 function workData(){return [...document.querySelectorAll('.work-card')].map(d=>({
@@ -450,9 +454,7 @@ function pdfFileName(title,date){
   const base=(title||'releve-de-cotes').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'releve-de-cotes';
   return base+'-'+(date||new Date().toISOString().slice(0,10))+'.pdf';
 }
-async function downloadProjectPdf(){
-  const status=$('pdfStatus'),button=$('downloadPdf');status.style.color='var(--ok)';status.textContent='Création du PDF…';button.disabled=true;
-  try{
+async function createProjectPdfFile(){
     if(!window.jspdf?.jsPDF)throw new Error("Le générateur PDF n'est pas disponible.");
     const projectTitle=$('projectTitle').value.trim(),projectDate=$('projectDate').value,pdfPages=projectPagesData();
     const hasWork=pdfPages.some(page=>(page.works||[]).some(work=>Object.entries(work).some(([key,value])=>{if(['type','other','qty'].includes(key))return false;if(Array.isArray(value))return value.length>0;if(value&&typeof value==='object')return Object.values(value).some(Boolean);return Boolean(value&&String(value).trim())})));
@@ -510,11 +512,17 @@ async function downloadProjectPdf(){
     }
     const totalPages=doc.getNumberOfPages(),generated=new Date().toLocaleString('fr-FR');
     for(let pageNumber=1;pageNumber<=totalPages;pageNumber++){doc.setPage(pageNumber);doc.setDrawColor(209,213,219);doc.setLineWidth(.2);doc.line(margin,pageHeight-13,pageWidth-margin,pageHeight-13);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(107,114,128);doc.text('Généré le '+generated,margin,pageHeight-8);doc.text('Page '+pageNumber+' / '+totalPages,pageWidth-margin,pageHeight-8,{align:'right'})}
-    const name=pdfFileName(projectTitle,projectDate),blob=doc.output('blob'),file=new File([blob],name,{type:'application/pdf'});
+    const name=pdfFileName(projectTitle,projectDate),blob=doc.output('blob');
+    return new File([blob],name,{type:'application/pdf'});
+}
+async function downloadProjectPdf(){
+  const status=$('pdfStatus'),button=$('downloadPdf');status.style.color='var(--ok)';status.textContent='Création du PDF…';button.disabled=true;
+  try{
+    const projectTitle=$('projectTitle').value.trim(),file=await createProjectPdfFile();
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
       try{await navigator.share({title:'Relevé de cotes '+(projectTitle||''),files:[file]});status.textContent='PDF créé et partagé.';return}catch(error){if(error?.name==='AbortError'){status.textContent='Partage du PDF annulé.';return}}
     }
-    downloadBackupFile(file);status.textContent='PDF téléchargé : '+name;
+    downloadBackupFile(file);status.textContent='PDF téléchargé : '+file.name;
   }catch(error){
     console.error('Échec de la création du PDF',error);status.style.color='#991b1b';status.textContent='Le PDF n’a pas pu être créé : '+(error.message||'erreur inconnue');
   }finally{button.disabled=false}
@@ -550,49 +558,22 @@ async function shareCurrentProjectBackup(){
   const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
   if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
   const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
-  const file=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'});
-  setBackupStatus('Choisissez kDrive puis « Projets appel d’offres / Relevés de cotes iPad ».');
-  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  const appFile=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),pdfFile=await createProjectPdfFile(),files=[pdfFile,appFile];
+  setBackupStatus('Choisissez « Enregistrer dans Fichiers », puis kDrive et le dossier « Relevés de cotes ».');
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
-      await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files:[file]});
-      setBackupStatus('Relevé enregistré sur cet appareil et copie envoyée vers la destination choisie.');
+      await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files});
+      setBackupStatus('PDF et fichier application envoyés vers la destination choisie.');
     }catch(error){
       if(error?.name==='AbortError'){
-        setBackupStatus('Relevé enregistré sur cet appareil. Copie vers kDrive annulée.');
+        setBackupStatus('Relevé enregistré sur cet iPad. Enregistrement kDrive annulé.');
         return;
       }
       throw error;
     }
   }else{
-    downloadBackupFile(file);
-    setBackupStatus('Relevé enregistré sur cet appareil. Fichier téléchargé : '+file.name);
-  }
-}
-async function exportBackup(){
-  setBackupStatus('Préparation de la sauvegarde…');
-  try{
-    await flushPendingSave();
-    const projects=await allProjects();
-    if(!projects.length){setBackupStatus('Aucun dossier à exporter.',true);return}
-    const exportedAt=new Date().toISOString();
-    const backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects};
-    const name='releve-chantier-'+exportedAt.slice(0,10)+'.json';
-    const file=new File([JSON.stringify(backup)],name,{type:'application/json'});
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      try{
-        await navigator.share({title:'Sauvegarde Relevé Chantier',files:[file]});
-        setBackupStatus(projects.length+' dossier(s) partagé(s) avec succès.');
-      }catch(error){
-        if(error?.name==='AbortError')setBackupStatus('Partage annulé.');
-        else throw error;
-      }
-    }else{
-      downloadBackupFile(file);
-      setBackupStatus(projects.length+' dossier(s) exporté(s) dans '+name+'.');
-    }
-  }catch(error){
-    console.error("Échec de l'export",error);
-    setBackupStatus("L'export a échoué : "+(error.message||'erreur inconnue'),true);
+    files.forEach(downloadBackupFile);
+    setBackupStatus('Partage de fichiers indisponible : PDF et fichier application téléchargés séparément.');
   }
 }
 function validateBackup(backup){
@@ -645,7 +626,7 @@ function hasProjectContent(savedPages){
 }
 function scheduleAutosave(){
   changeVersion++;setSaveState('dirty');clearTimeout(autoSaveTimer);
-  autoSaveTimer=setTimeout(()=>persistProject(false),900);
+  autoSaveTimer=setTimeout(()=>persistProject(false),300);
 }
 async function persistProject(notify=false){
   clearTimeout(autoSaveTimer);
@@ -690,7 +671,7 @@ function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.mea
 function loadProject(x){clearTimeout(autoSaveTimer);currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];suppliers=Array.isArray(x.suppliers)?[...x.suppliers]:(x.supplier?[x.supplier]:[]);renderSuppliers();pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();changeVersion=lastSavedVersion=0;setSaveState('saved');scrollTo({top:0,behavior:'smooth'})}
 function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];suppliers=[];renderPhotos();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value='';changeVersion=lastSavedVersion=0;setSaveState('idle')}
 $('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
-$('exportBackup').onclick=exportBackup;
+$('exportBackup').onclick=save;
 $('backupFile').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(file)await importBackupFile(file)};
 function trackEditableChange(event){
   const target=event.target;
@@ -712,4 +693,5 @@ if('serviceWorker' in navigator){
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
 </script>
 </body></html>
+
 
