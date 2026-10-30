@@ -1,7 +1,9 @@
-const CACHE_NAME = 'releve-chantier-v20261029-4';
+const CACHE_NAME = 'releve-chantier-v20261030-4';
 const APP_FILES = [
   './',
   './index.html',
+  './app.css',
+  './app.js',
   './manifest.webmanifest',
   './logo-sam.png',
   './jspdf.umd.min.js',
