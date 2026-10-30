@@ -1,4 +1,4 @@
-const CACHE_NAME = 'releve-chantier-v20261029-4';
+const CACHE_NAME = 'releve-chantier-v20261030-1';
 const APP_FILES = [
   './',
   './index.html',
