@@ -230,8 +230,8 @@ async function openProjectByVoice(name){const projects=await allProjects(),n=nor
 async function executeVoiceCommand(spoken){
   const text=commandText(spoken),feedback=$('voiceFeedback');feedback.textContent=`Commande entendue : « ${spoken} »`;
   if(/arrete|stop|desactive/.test(text)){stopVoiceAssistant();return}
-  if(/^(enregistre|sauvegarde)|enregistrer le chantier|sauvegarder le chantier/.test(text)){await save();feedback.textContent='✅ Chantier enregistré.';return}
-  if(/nouveau chantier|nouveau releve/.test(text)){if(confirm('Enregistrer le chantier actuel avant d’en créer un nouveau ?'))await save();clearForm();activeWorkIndex=0;feedback.textContent='✅ Nouveau chantier prêt.';return}
+  if(/^(enregistre|sauvegarde)|enregistrer le chantier|sauvegarder le chantier/.test(text)){const copied=await saveOfflineCopy();feedback.textContent=copied?'✅ Copie iPad préparée.':'Copie iPad annulée.';return}
+  if(/nouveau chantier|nouveau releve/.test(text)){if(confirm('Enregistrer le chantier actuel avant d’en créer un nouveau ?')&&!await saveOfflineCopy())return;clearForm();activeWorkIndex=0;feedback.textContent='✅ Nouveau chantier prêt.';return}
   if(/ouvrir (le )?chantier/.test(text)){const name=text.replace(/^.*ouvrir (le )?chantier/,'').trim();feedback.textContent=await openProjectByVoice(name)?`✅ Chantier « ${name} » ouvert.`:`⚠️ Aucun chantier trouvé pour « ${name} ».`;return}
   if(/nouvelle page|nouveau type/.test(text)){const type=typeFromCommand(text);createPage(type);feedback.textContent=`✅ Nouvelle page ${type||'sans type'} créée.`;return}
   if(/ajoute|ajouter|nouvel ouvrage|nouveau ouvrage/.test(text)){const type=typeFromCommand(text);if(type&&pages[activePageIndex]?.type!==type)ensurePageForType(type);addWork({type:pages[activePageIndex]?.type||type});captureActivePage();renderPageTabs();scheduleAutosave();activeWorkIndex=document.querySelectorAll('.work-card').length-1;feedback.textContent=`✅ Ouvrage ${pages[activePageIndex]?.type||'sans type'} ajouté sur la page ${activePageIndex+1}.`;document.querySelectorAll('.work-card')[activeWorkIndex].scrollIntoView({behavior:'smooth',block:'start'});return}
@@ -533,9 +533,9 @@ async function prepareProjectCopy(){
   return persistProject(false);
 }
 async function saveOfflineCopy(){
-  if(!await prepareProjectCopy())return;
-  try{await shareCurrentProjectBackup('local')}
-  catch(error){console.error("Échec de la copie locale",error);setBackupStatus("Le relevé reste enregistré dans l’application, mais la copie dans Fichiers a échoué : "+(error.message||"erreur inconnue"),true)}
+  if(!await prepareProjectCopy())return false;
+  try{return await shareCurrentProjectBackup('local')}
+  catch(error){console.error("Échec de la copie locale",error);setBackupStatus("Le relevé reste enregistré dans l’application, mais la copie dans Fichiers a échoué : "+(error.message||"erreur inconnue"),true);return false}
 }
 async function sendToKDrive(){
   if(!await prepareProjectCopy())return;
