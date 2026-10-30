@@ -102,9 +102,10 @@
     <div class="collapsible-card-body">
     <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
     <div class="row" style="margin-top:12px">
-      <button class="secondary" id="exportBackup" type="button">Enregistrement kDrive</button>
+      <button class="secondary" id="exportBackup" type="button">Envoyer vers kDrive</button>
     </div>
-    <div class="hint"><strong>Enregistrement kDrive :</strong> le PDF et le fichier de l’application sont proposés ensemble. Sur iPad, choisissez « Enregistrer dans Fichiers », puis kDrive et le dossier « Relevés de cotes ».</div>
+    <div class="hint"><strong>Deux copies séparées :</strong> « Enregistrer sur l’iPad » crée le PDF et le fichier modifiable dans Fichiers, même hors connexion. « Envoyer vers kDrive » nécessite une connexion.</div>
+    <div class="status" id="connectionStatus" role="status" aria-live="polite"></div>
     <div class="hint">Le fichier JSON permet de rouvrir et modifier le relevé avec ses photos et croquis.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
     <div class="status" id="storageStatus" role="status" aria-live="polite"></div>
@@ -127,7 +128,7 @@
     <div class="editor-actions"><button class="ghost" id="cancelPhotoEdit" type="button">Fermer sans enregistrer</button><button class="primary" id="savePhotoEdit" type="button">Enregistrer l’annotation</button></div>
   </div>
 </div>
-<div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer</button><button class="secondary" id="newProject" type="button">Nouveau</button><label class="file-picker ghost" for="backupFile">Importer</label></div>
+<div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer sur l’iPad</button><button class="secondary" id="newProject" type="button">Nouveau</button><label class="file-picker ghost" for="backupFile">Importer</label></div>
 <script src="jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 </body></html>
