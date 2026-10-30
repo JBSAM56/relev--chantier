@@ -89,7 +89,7 @@ function addWork(w={}){
     <div class="full"><label>Observations sur l'ouvrage</label><div class="field-with-mic"><textarea class="wobs" placeholder="Finition, couleur, sens d'ouverture, vitrage, occultation, contraintes...">${esc(w.obs)}</textarea>${micButton(id+'-obs')}</div></div>
     <button class="voice-all" type="button">🎙️ Dicter toutes les informations de cet ouvrage</button>
     <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres », puis « largeur pièce 3 virgule 8 », puis « type parquet contrecollé ». Les champs sont remplis après chaque courte pause.</div>
-    <details class="sketch-wrap"><summary class="sketch-summary">Croquis et cotes au doigt <span class="sketch-status" aria-live="polite"></span></summary><div class="sketch-body"><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button" title="Ajouter une cote ou un texte propre">T Lettre / cote</button><button class="ghost undo-sketch" type="button" title="Annuler la dernière action">↶ Retour</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">« Lettre / cote » écrit proprement le texte à l’endroit touché. « Retour » annule le dernier trait, texte ou effacement.</div></div></details>
+    <details class="sketch-wrap"><summary class="sketch-summary">Croquis et cotes au doigt <span class="sketch-status" aria-live="polite"></span></summary><div class="sketch-body"><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><select class="sketch-shape" aria-label="Choisir une forme" title="Dessiner une forme"><option value="">▱ Formes</option><option value="square">Carré</option><option value="rectangle">Rectangle</option><option value="triangle">Triangle</option><option value="circle">Cercle</option></select><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button" title="Ajouter une cote ou un texte propre">T Lettre / cote</button><button class="ghost undo-sketch" type="button" title="Annuler la dernière action">↶ Retour</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">Choisissez une forme, puis faites glisser le doigt entre ses deux coins. « Lettre / cote » ajoute un texte propre et « Retour » annule la dernière action.</div></div></details>
     <details class="work-photos full"><summary class="work-photos-summary">Photos de cet ouvrage <span class="work-photos-status">Aucune photo</span></summary><div class="work-photos-body"><label>Ajouter des photos</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Après la prise de vue, touchez « Ajouter à Photos », puis « Enregistrer l’image » dans la feuille de partage iPadOS.</div><div class="photo-grid wphoto-grid"></div></div></details>
   </div>`;
   d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave()};
@@ -126,7 +126,7 @@ function canvasPoint(canvas,e,width=canvas.width,height=canvas.height){
   return{x:(e.clientX-rect.left-borderLeft)*width/contentWidth,y:(e.clientY-rect.top-borderTop)*height/contentHeight};
 }
 function initSketch(d){
-  const details=d.querySelector('.sketch-wrap'),c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select'),textButton=d.querySelector('.add-text'),status=d.querySelector('.sketch-status');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',pendingText='',paintVersion=0,dashDistance=0;
+  const details=d.querySelector('.sketch-wrap'),c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select'),shapeSelect=d.querySelector('.sketch-shape'),textButton=d.querySelector('.add-text'),status=d.querySelector('.sketch-status');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',pendingText='',paintVersion=0,dashDistance=0;
   const sketchHistory=d._sketches.map(saved=>[saved||'']);
   function refreshStatus(){const count=d._sketches.filter(Boolean).length;status.textContent=count?`${count} dessin${count>1?'s':''}`:'Aucun dessin'}
   function refreshSelect(){select.innerHTML=d._sketches.map((_,i)=>`<option value="${i}" ${i===d._activeSketch?'selected':''}>Croquis ${i+1}</option>`).join('');refreshStatus()}
@@ -134,23 +134,34 @@ function initSketch(d){
   function drawingScale(){return ((c.width/Math.max(1,c.clientWidth))+(c.height/Math.max(1,c.clientHeight)))/2}
   function dash(){const scale=drawingScale(),style=d.querySelector('.sketch-style').value;return style==='dotted'?[2*scale,7*scale]:style==='dashed'?[12*scale,8*scale]:[]}
   function stroke(a,b,currentMode=mode,offset=0){const scale=drawingScale(),distance=Math.hypot(b.x-a.x,b.y-a.y);ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=(currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value))*scale;ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.lineDashOffset=-offset;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();return distance}
+  function drawShape(a,b,shape=mode){
+    const scale=drawingScale(),dx=b.x-a.x,dy=b.y-a.y;
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.lineWidth=Number(d.querySelector('.sketch-width').value)*scale;ctx.setLineDash(dash());ctx.beginPath();
+    if(shape==='square'){
+      const side=Math.max(Math.abs(dx),Math.abs(dy)),x=a.x+(dx<0?-side:side),y=a.y+(dy<0?-side:side);ctx.rect(Math.min(a.x,x),Math.min(a.y,y),side,side);
+    }else if(shape==='rectangle')ctx.rect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(dx),Math.abs(dy));
+    else if(shape==='triangle'){ctx.moveTo(a.x+dx/2,a.y);ctx.lineTo(a.x,b.y);ctx.lineTo(b.x,b.y);ctx.closePath()}
+    else if(shape==='circle')ctx.arc(a.x,a.y,Math.hypot(dx,dy),0,Math.PI*2);
+    ctx.stroke();ctx.restore();
+  }
   function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,c.width,c.height)};im.src=saved}}
   function size(){const ratio=Math.max(1,window.devicePixelRatio||1);c.width=Math.max(1,Math.round(c.clientWidth*ratio));c.height=Math.max(1,Math.round(c.clientHeight*ratio));paintSaved()}
   function currentHistory(){return sketchHistory[d._activeSketch]||(sketchHistory[d._activeSketch]=[d._sketches[d._activeSketch]||''])}
   function recordSnapshot(data){d._sketches[d._activeSketch]=data;const history=currentHistory();if(history[history.length-1]!==data)history.push(data);if(history.length>16)history.shift();refreshStatus();scheduleAutosave()}
   function saveSketch(){recordSnapshot(c.toDataURL('image/png'))}
-  function setMode(next){mode=next;pendingText='';d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
-  c.onpointerdown=e=>{paintVersion++;if(pendingText){const p=point(e),scale=drawingScale();ctx.save();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.textBaseline='bottom';ctx.fillText(pendingText,p.x,Math.max(20*scale,p.y));ctx.restore();pendingText='';textButton.classList.remove('tool-active');d.querySelector('.'+mode).classList.add('tool-active');saveSketch();e.preventDefault();return}drawing=true;dashDistance=0;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
-  c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'){const p=point(e);ctx.putImageData(preview,0,0);stroke(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);dashDistance+=stroke(last,p,mode,dashDistance);last=p})}e.preventDefault()};
-  c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last){const distance=Math.hypot(p.x-last.x,p.y-last.y);if(distance>0)dashDistance+=stroke(last,p,mode,dashDistance);else if(dashDistance===0)stroke({x:p.x-.5*scale,y:p.y},p,mode,0)}drawing=false;saveSketch();e.preventDefault()};
-  c.onpointercancel=e=>{if(drawing){if(mode==='straight'&&preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
-  d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');d.querySelector('.eraser').onclick=()=>setMode('eraser');
+  const shapeModes=new Set(['square','rectangle','triangle','circle']);
+  function setMode(next){mode=next;pendingText='';d.querySelectorAll('.pen,.straight,.eraser,.add-text,.sketch-shape').forEach(control=>control.classList.remove('tool-active'));if(shapeModes.has(next)){shapeSelect.value=next;shapeSelect.classList.add('tool-active')}else{shapeSelect.value='';d.querySelector('.'+next).classList.add('tool-active')}}
+  c.onpointerdown=e=>{paintVersion++;if(pendingText){const p=point(e),scale=drawingScale();ctx.save();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.textBaseline='bottom';ctx.fillText(pendingText,p.x,Math.max(20*scale,p.y));ctx.restore();pendingText='';textButton.classList.remove('tool-active');if(shapeModes.has(mode))shapeSelect.classList.add('tool-active');else d.querySelector('.'+mode).classList.add('tool-active');saveSketch();e.preventDefault();return}drawing=true;dashDistance=0;start=last=point(e);preview=(mode==='straight'||shapeModes.has(mode))?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
+  c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'||shapeModes.has(mode)){const p=point(e);ctx.putImageData(preview,0,0);if(mode==='straight')stroke(start,p);else drawShape(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);dashDistance+=stroke(last,p,mode,dashDistance);last=p})}e.preventDefault()};
+  c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'||shapeModes.has(mode)){ctx.putImageData(preview,0,0);if(mode==='straight')stroke(start,p);else drawShape(start,p)}else if(last){const distance=Math.hypot(p.x-last.x,p.y-last.y);if(distance>0)dashDistance+=stroke(last,p,mode,dashDistance);else if(dashDistance===0)stroke({x:p.x-.5*scale,y:p.y},p,mode,0)}drawing=false;saveSketch();e.preventDefault()};
+  c.onpointercancel=e=>{if(drawing){if(preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
+  d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');shapeSelect.onchange=()=>{if(shapeSelect.value)setMode(shapeSelect.value);else setMode('pen')};d.querySelector('.eraser').onclick=()=>setMode('eraser');
   d.querySelectorAll('.color-swatch').forEach(button=>button.onclick=()=>{color=button.dataset.color;d.querySelectorAll('.color-swatch').forEach(item=>item.classList.toggle('active',item===button))});
   select.onchange=()=>{d._activeSketch=Number(select.value);pendingText='';textButton.classList.remove('tool-active');paintSaved()};
   d.querySelector('.add-sketch').onclick=()=>{d._sketches.push('');sketchHistory.push(['']);d._activeSketch=d._sketches.length-1;refreshSelect();paintSaved();scheduleAutosave()};
   d.querySelector('.remove-sketch').onclick=()=>{if(d._sketches.length===1){alert('Il faut conserver au moins un croquis.');return}if(confirm('Supprimer ce croquis ?')){d._sketches.splice(d._activeSketch,1);sketchHistory.splice(d._activeSketch,1);d._activeSketch=Math.max(0,d._activeSketch-1);refreshSelect();paintSaved();scheduleAutosave()}};
   d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){recordSnapshot('');paintSaved()}};
-  textButton.onclick=()=>{const text=prompt('Saisir la cote ou la lettre à ajouter :');if(!text?.trim())return;pendingText=text.trim();d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));textButton.classList.add('tool-active')};
+  textButton.onclick=()=>{const text=prompt('Saisir la cote ou la lettre à ajouter :');if(!text?.trim())return;pendingText=text.trim();d.querySelectorAll('.pen,.straight,.eraser,.add-text,.sketch-shape').forEach(control=>control.classList.remove('tool-active'));textButton.classList.add('tool-active')};
   d.querySelector('.undo-sketch').onclick=()=>{const history=currentHistory();if(history.length<=1)return;history.pop();d._sketches[d._activeSketch]=history[history.length-1];pendingText='';textButton.classList.remove('tool-active');paintSaved();scheduleAutosave()};
   refreshSelect();if(details.open)requestAnimationFrame(size);details.addEventListener('toggle',()=>{if(details.open)requestAnimationFrame(size)});
 }
@@ -438,7 +449,7 @@ async function shareCurrentProjectBackup(destination){
   setBackupStatus(local?'Choisissez « Enregistrer dans Fichiers », puis « Sur mon iPad ».':'Choisissez kDrive, puis le dossier « Relevés de cotes ».');
   if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
-      await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files});
+      await navigator.share({files});
       setBackupStatus(local?'PDF et fichier modifiable remis à Fichiers. Vérifiez leur présence dans « Sur mon iPad ».':'PDF et fichier modifiable remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
       return true;
     }catch(error){
@@ -455,6 +466,7 @@ function validateBackup(backup){
   if(!backup.projects.every(project=>project&&typeof project==='object'&&Number.isFinite(project.id)&&(project.updated===undefined||Number.isFinite(project.updated))&&(project.pages===undefined||Array.isArray(project.pages))&&(project.photos===undefined||Array.isArray(project.photos))))throw new Error('La sauvegarde contient un dossier incomplet ou endommagé.');
 }
 async function importBackupFile(file){
+  $('projectsSection').open=true;
   setBackupStatus('Lecture de la sauvegarde…');
   try{
     if(file.size>MAX_BACKUP_SIZE)throw new Error('Le fichier dépasse la taille maximale de 250 Mo.');
@@ -561,6 +573,14 @@ function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f
 $('saveProject').onclick=saveOfflineCopy;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
 $('exportBackup').onclick=sendToKDrive;window.addEventListener('online',updateConnectionStatus);window.addEventListener('offline',updateConnectionStatus);updateConnectionStatus();
 $('backupFile').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(file)await importBackupFile(file)};
+if('launchQueue' in window){
+  window.launchQueue.setConsumer(async launchParams=>{
+    const handle=launchParams.files?.[0];
+    if(!handle)return;
+    try{await importBackupFile(await handle.getFile())}
+    catch(error){console.error("Échec de l'ouverture directe",error);$('projectsSection').open=true;setBackupStatus("Le fichier n’a pas pu être ouvert : "+(error.message||'erreur inconnue'),true)}
+  });
+}
 function trackEditableChange(event){
   const target=event.target;
   if(target.matches('input:not([type="file"]),select,textarea')&&target.id!=='summary')scheduleAutosave();
@@ -579,3 +599,4 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 }
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();associateLabels();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
+
