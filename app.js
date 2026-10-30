@@ -424,27 +424,31 @@ function projectBackupFileName(project,exportedAt){
   const stamp=exportedAt.replace(/[-:]/g,'').replace('T','-').slice(0,15);
   return 'releve-de-cotes-'+base+'-'+stamp+'.json';
 }
-async function shareCurrentProjectBackup(){
+async function currentProjectFiles(){
   const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
   if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
   const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
-  const appFile=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),pdfFile=await createProjectPdfFile(),files=[pdfFile,appFile];
-  setBackupStatus('Choisissez « Enregistrer dans Fichiers », puis kDrive et le dossier « Relevés de cotes ».');
+  const appFile=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),pdfFile=await createProjectPdfFile();
+  return{project,files:[pdfFile,appFile]};
+}
+async function shareCurrentProjectBackup(destination){
+  $('projectsSection').open=true;
+  if(destination==='kdrive'&&!navigator.onLine){setBackupStatus('Hors connexion : le relevé reste enregistré dans l’iPad. Utilisez « Enregistrer sur l’iPad », puis envoyez-le vers kDrive lorsque le réseau revient.',true);return false}
+  const {project,files}=await currentProjectFiles(),local=destination==='local';
+  setBackupStatus(local?'Choisissez « Enregistrer dans Fichiers », puis « Sur mon iPad ».':'Choisissez kDrive, puis le dossier « Relevés de cotes ».');
   if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
       await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files});
-      setBackupStatus('PDF et fichier application envoyés vers la destination choisie.');
+      setBackupStatus(local?'PDF et fichier modifiable remis à Fichiers. Vérifiez leur présence dans « Sur mon iPad ».':'PDF et fichier modifiable remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
+      return true;
     }catch(error){
-      if(error?.name==='AbortError'){
-        setBackupStatus('Relevé enregistré sur cet iPad. Enregistrement kDrive annulé.');
-        return;
-      }
+      if(error?.name==='AbortError'){setBackupStatus(local?'Copie dans Fichiers annulée. Le relevé reste enregistré dans l’application.':'Envoi vers kDrive annulé. Le relevé reste enregistré dans l’iPad.');return false}
       throw error;
     }
-  }else{
-    files.forEach(downloadBackupFile);
-    setBackupStatus('Partage de fichiers indisponible : PDF et fichier application téléchargés séparément.');
   }
+  files.forEach(downloadBackupFile);
+  setBackupStatus(local?'PDF et fichier modifiable téléchargés sur l’appareil.':'Partage kDrive indisponible : les fichiers ont été téléchargés sur l’appareil pour un envoi ultérieur.');
+  return true;
 }
 function validateBackup(backup){
   if(!backup||backup.format!==BACKUP_FORMAT||backup.version!==BACKUP_VERSION||!Array.isArray(backup.projects))throw new Error('Ce fichier ne correspond pas à une sauvegarde Relevé Chantier compatible.');
@@ -481,7 +485,7 @@ async function importBackupFile(file){
 function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('releveChantierDB',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function setSaveState(state){
   const button=$('saveProject');if(!button)return;
-  button.textContent=state==='saving'?'Enregistrement…':state==='saved'?'Enregistré ✓':state==='error'?'Réessayer':'Enregistrer';
+  button.textContent=state==='saving'?'Enregistrement…':state==='saved'?'Enregistré sur l’iPad ✓':state==='error'?'Réessayer':'Enregistrer sur l’iPad';
 }
 function hasProjectContent(savedPages){
   const mainFields=fields.filter(f=>f!=='projectDate').some(f=>String($(f).value||'').trim());
@@ -519,21 +523,29 @@ async function persistProject(notify=false){
     isSaving=false;if(changeVersion>lastSavedVersion)autoSaveTimer=setTimeout(()=>persistProject(false),300);
   }
 }
-async function save(){
+async function prepareProjectCopy(){
   const currentTitle=$('projectTitle').value.trim(),client=$('contactName').value.trim(),suggested=currentTitle||['Chantier',client].filter(Boolean).join(' - ');
   const checkedTitle=prompt('Vérifiez le titre du document (référence chantier / client). Vous pouvez le modifier avant l’enregistrement :',suggested);
-  if(checkedTitle===null)return;
-  const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return}
+  if(checkedTitle===null)return false;
+  const title=checkedTitle.trim();if(!title){alert('Indiquez une référence chantier / client avant d’enregistrer.');$('projectTitle').focus();return false}
   if(title!==currentTitle){$('projectTitle').value=title;changeVersion++;setSaveState('dirty')}
   while(isSaving)await new Promise(resolve=>setTimeout(resolve,50));
-  const saved=await persistProject(false);
-  if(!saved)return;
-  try{
-    await shareCurrentProjectBackup();
-  }catch(error){
-    console.error("Échec de la copie externe",error);
-    setBackupStatus("Le relevé est enregistré sur cet appareil, mais la copie vers kDrive a échoué : "+(error.message||"erreur inconnue"),true);
-  }
+  return persistProject(false);
+}
+async function saveOfflineCopy(){
+  if(!await prepareProjectCopy())return;
+  try{await shareCurrentProjectBackup('local')}
+  catch(error){console.error("Échec de la copie locale",error);setBackupStatus("Le relevé reste enregistré dans l’application, mais la copie dans Fichiers a échoué : "+(error.message||"erreur inconnue"),true)}
+}
+async function sendToKDrive(){
+  if(!await prepareProjectCopy())return;
+  try{await shareCurrentProjectBackup('kdrive')}
+  catch(error){console.error("Échec de l’envoi kDrive",error);setBackupStatus("Le relevé reste enregistré dans l’iPad, mais l’envoi vers kDrive a échoué : "+(error.message||"erreur inconnue"),true)}
+}
+function updateConnectionStatus(){
+  const status=$('connectionStatus');if(!status)return;
+  status.textContent=navigator.onLine?'Connexion disponible : l’envoi vers kDrive peut être lancé.':'Hors connexion : utilisez « Enregistrer sur l’iPad ». L’envoi kDrive sera possible au retour du réseau.';
+  status.style.color=navigator.onLine?'var(--ok)':'#92400e';
 }
 async function renderStorageStatus(){
   const box=$('storageStatus');if(!box)return;
@@ -546,8 +558,8 @@ async function renderProjects(){const p=await allProjects(),box=$('projectList')
 function legacyToWorks(x){if(x.works?.length)return x.works;if(x.workType||x.measures?.length){const m=x.measures?.[0]||{};return[{type:x.workType||'',other:x.workOther||'',material:x.material||'',materialOther:x.materialOther||'',install:x.installType||'',installOther:x.installOther||'',width:m.w||'',height:m.h||'',extra:(x.measures||[]).slice(1).map(a=>`${a.label||'Dimension'} : ${a.w||''}${a.h?' x '+a.h:''} ${a.u||'mm'}`).join('\n')}]}return[{}]}
 function loadProject(x){clearTimeout(autoSaveTimer);currentId=x.id;fields.forEach(f=>$(f).value=x[f]||'');photoData=x.photos||[];suppliers=Array.isArray(x.suppliers)?[...x.suppliers]:(x.supplier?[x.supplier]:[]);renderSuppliers();pages=normalizePages(x);activePageIndex=0;showPage(0,false);renderPhotos();changeVersion=lastSavedVersion=0;setSaveState('saved');scrollTo({top:0,behavior:'smooth'})}
 function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f=>$(f).value='');$('projectDate').value=new Date().toISOString().slice(0,10);photoData=[];suppliers=[];renderPhotos();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];activePageIndex=0;showPage(0,false);$('summary').value='';changeVersion=lastSavedVersion=0;setSaveState('idle')}
-$('saveProject').onclick=save;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
-$('exportBackup').onclick=save;
+$('saveProject').onclick=saveOfflineCopy;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
+$('exportBackup').onclick=sendToKDrive;window.addEventListener('online',updateConnectionStatus);window.addEventListener('offline',updateConnectionStatus);updateConnectionStatus();
 $('backupFile').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(file)await importBackupFile(file)};
 function trackEditableChange(event){
   const target=event.target;
