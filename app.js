@@ -441,6 +441,30 @@ function projectBackupFileName(project,exportedAt){
   const stamp=exportedAt.replace(/[-:]/g,'').replace('T','-').slice(0,15);
   return 'releve-de-cotes-'+base+'-'+stamp+'.json';
 }
+const ZIP_CRC_TABLE=(()=>{const table=new Uint32Array(256);for(let n=0;n<256;n++){let value=n;for(let bit=0;bit<8;bit++)value=value&1?0xedb88320^(value>>>1):value>>>1;table[n]=value>>>0}return table})();
+function zipCrc32(bytes){let crc=0xffffffff;for(const byte of bytes)crc=ZIP_CRC_TABLE[(crc^byte)&255]^(crc>>>8);return(crc^0xffffffff)>>>0}
+function zipPush16(out,value){out.push(value&255,(value>>>8)&255)}
+function zipPush32(out,value){out.push(value&255,(value>>>8)&255,(value>>>16)&255,(value>>>24)&255)}
+function dataUrlBytes(source){const comma=source.indexOf(',');if(comma<0)throw new Error('Une photo est illisible.');const meta=source.slice(0,comma),payload=source.slice(comma+1);if(meta.includes(';base64')){const binary=atob(payload),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}return new TextEncoder().encode(decodeURIComponent(payload))}
+function archivePart(value,fallback){return String(value||fallback).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||fallback}
+function photoExtension(source){const mime=String(source).slice(5,String(source).indexOf(';')).toLowerCase();return({jpeg:'jpg',jpg:'jpg',png:'png',webp:'webp',heic:'heic',heif:'heif',gif:'gif'})[mime.split('/')[1]]||'jpg'}
+function photoArchiveFile(project){
+  const entries=[],addPhotos=(photos,prefix)=>{(photos||[]).filter(Boolean).forEach((source,index)=>entries.push({name:prefix+'photo-'+String(index+1).padStart(3,'0')+'.'+photoExtension(source),source}))};
+  addPhotos(project.photos,'photos-generales/');
+  normalizePages(project).forEach((page,pageIndex)=>(page.works||[]).forEach((work,workIndex)=>addPhotos(work.photos,'pages/page-'+String(pageIndex+1).padStart(2,'0')+'-'+archivePart(shown(page.type,page.other),'ouvrage')+'/ouvrage-'+String(workIndex+1).padStart(2,'0')+'/')));
+  if(!entries.length)throw new Error('Aucune photo n’est enregistrée dans ce chantier.');
+  const encoder=new TextEncoder(),now=new Date(),dosTime=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1),dosDate=((Math.max(1980,now.getFullYear())-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(),localParts=[],centralParts=[];let offset=0,centralSize=0;
+  entries.forEach(entry=>{
+    const name=encoder.encode(entry.name),data=dataUrlBytes(entry.source),crc=zipCrc32(data),local=[];
+    zipPush32(local,0x04034b50);zipPush16(local,20);zipPush16(local,0);zipPush16(local,0);zipPush16(local,dosTime);zipPush16(local,dosDate);zipPush32(local,crc);zipPush32(local,data.length);zipPush32(local,data.length);zipPush16(local,name.length);zipPush16(local,0);
+    const localBytes=new Uint8Array(local);localParts.push(localBytes,name,data);
+    const central=[];zipPush32(central,0x02014b50);zipPush16(central,20);zipPush16(central,20);zipPush16(central,0);zipPush16(central,0);zipPush16(central,dosTime);zipPush16(central,dosDate);zipPush32(central,crc);zipPush32(central,data.length);zipPush32(central,data.length);zipPush16(central,name.length);zipPush16(central,0);zipPush16(central,0);zipPush16(central,0);zipPush16(central,0);zipPush32(central,0);zipPush32(central,offset);
+    const centralBytes=new Uint8Array(central);centralParts.push(centralBytes,name);centralSize+=centralBytes.length+name.length;offset+=localBytes.length+name.length+data.length;
+  });
+  const end=[];zipPush32(end,0x06054b50);zipPush16(end,0);zipPush16(end,0);zipPush16(end,entries.length);zipPush16(end,entries.length);zipPush32(end,centralSize);zipPush32(end,offset);zipPush16(end,0);
+  const filename='photos-'+archivePart(project.projectTitle||project.contactName,'chantier')+'-'+new Date().toISOString().slice(0,10)+'.zip';
+  return new File([...localParts,...centralParts,new Uint8Array(end)],filename,{type:'application/zip'});
+}
 async function currentProjectFile(format){
   const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
   if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
@@ -448,12 +472,12 @@ async function currentProjectFile(format){
     const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
     return{project,file:new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),label:'fichier modifiable complet'};
   }
-  return{project,file:await createProjectPdfFile(),label:'PDF complet avec toutes les photos'};
+  return{project,file:photoArchiveFile(project),label:'archive ZIP contenant toutes les photos'};
 }
 async function shareCurrentProjectBackup(destination){
   $('projectsSection').open=true;
   if(destination==='kdrive'&&!navigator.onLine){setBackupStatus('Hors connexion : le relevé reste enregistré dans l’iPad. Utilisez « Enregistrer sur l’iPad », puis envoyez-le vers kDrive lorsque le réseau revient.',true);return false}
-  const format=$('exportFormat')?.value||'pdf',{file,label}=await currentProjectFile(format),files=[file],local=destination==='local';
+  const format=$('exportFormat')?.value||'photos',{file,label}=await currentProjectFile(format),files=[file],local=destination==='local';
   setBackupStatus(local?'Choisissez « Enregistrer dans Fichiers », puis « Sur mon iPad ».':'Choisissez kDrive, puis le dossier « Relevés de cotes ».');
   if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
