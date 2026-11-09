@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 let photoData=[],suppliers=[],currentId=null,recognition=null,activeMic=null,workCounter=0,accessibleFieldCounter=0,commandRecognition=null,voiceCommandQueue=Promise.resolve(),voiceControlOn=false,activeWorkIndex=0,pages=[],activePageIndex=0,renderingPage=false,autoSaveTimer=null,changeVersion=0,lastSavedVersion=0,isSaving=false,photoEditorState=null;
 const fields=['projectTitle','projectDate','contactName','contactPhone','contactEmail','address','notes','supplier','hardwareRef','hardwareNeed'];
-const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Baie coulissante','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
+const workTypes=['','Fenêtre',"Porte d'entrée",'Porte intérieure','Porte de garage','Volet roulant motorisé','Volet roulant manuel','Volet bois','Store','Escalier','Parquet','Placard','Agencement','Garde-corps / main courante','Bardage','Vitrage','Autre'];
 const materials=['','Bois','Aluminium','PVC','Acier','Mixte','Stratifié','Autre'];
 const installs=['','Rénovation','Dépose totale','En tunnel','En applique',"Avec tapées d'isolation",'En feuillure','Neuf','Autre'];
 const tapeThicknesses=['','100','120','140','160','180','200','Autre'];
@@ -21,9 +21,9 @@ const specificSchemas={
     ['headroom','Échappée disponible','mm','decimal'],['startingSpace','Reculement disponible','mm','decimal'],['stringer','Type de limon','À la française|Crémaillère|Central|Sans limon|Autre','select'],
     ['guardrail','Garde-corps / main courante','Description','text'],['stairMaterial','Essence / matériau / finition','Description','text']
   ],
-  'Fenêtre':[['leafCount','Nombre de vantaux','Nombre','numeric'],['opening','Type d’ouverture','Fixe|À la française|Oscillo-battant|Soufflet|Coulissant|Autre','select'],['openingOther','Nature de la configuration','Ex. 2 vantaux et un fixe, avec allège','text'],['glazing','Composition du vitrage','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text'],['ventilation','Entrée d’air','Débit / type','text']],
+  'Fenêtre':[['leafCount','Nombre de vantaux','Nombre','numeric'],['opening','Type d’ouverture','Fixe|À la française|Oscillo-battant|Soufflet|Coulissant|Autre','select'],['openingDirection','Sens d’ouverture','Tirant droit|Tirant gauche','select'],['openingOther','Nature de la configuration','Ex. 2 vantaux et un fixe, avec allège','text'],['glazing','Composition du vitrage','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text'],['ventilation','Entrée d’air','Débit / type','text']],
   "Porte d'entrée":[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Droite tirante|Gauche tirante','select'],['clearPassage','Passage utile','mm','decimal'],['threshold','Type de seuil','PMR 20 mm|Standard|Autre','select'],['lock','Serrure / cylindre / contrôle d’accès','Description','text'],['glazing','Vitrage / panneau / imposte','Description','text'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
-  'Porte intérieure':[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Va-et-vient|Coulissante','select'],['wallThickness','Épaisseur de cloison finie','mm','decimal'],['doorLeaf','Dimensions du vantail','mm','text'],['doorType','Type de porte','Isoplane|Postformée|Stratifiée|Hydrofuge|Coupe-feu|Acoustique|Autre','select'],['hardware','Quincaillerie / serrure','Description','text']],
+  'Porte intérieure':[['openingDirection','Sens d’ouverture','Droite poussante|Gauche poussante|Va-et-vient|Coulissante','select'],['wallThickness','Épaisseur de cloison finie','mm','decimal'],['doorLeaf','Dimensions du vantail','mm','text'],['doorType','Type de porte','Isoplane|Plane âme alvéolaire|Plane âme pleine|Postformée|Stratifiée|Hydrofuge|Coupe-feu|Pare-flamme|Isophonique|Acoustique|Isolante|Autre','select'],['hardware','Quincaillerie / serrure','Description','text']],
   'Porte de garage':[['garageType','Type','Sectionnelle plafond|Sectionnelle latérale|Basculante|Enroulable|Battante|Autre','select'],['clearOpening','Baie / passage libre','mm','text'],['headroom','Retombée de linteau','mm','decimal'],['sideRoom','Écoinçons gauche / droite','mm','text'],['motorization','Manœuvre / motorisation','Manuelle|Motorisée radio|Autre','select']],
   'Baie coulissante':[['leafCount','Nombre de vantaux / rails','Description','text'],['glazing','Composition du vitrage','Description','text'],['clearPassage','Passage utile','mm','decimal'],['color','Couleur intérieure / extérieure','RAL / finition','text']],
   'Volet roulant motorisé':[['boxType','Type de coffre','Rénovation|Traditionnel|Bloc-baie|Tunnel|Existant','select'],['boxSize','Dimensions / accès du coffre','mm','text'],['guides','Coulisses / lame finale','Description','text'],['apron','Tablier : matière, lame, couleur','Description','text'],['motor','Moteur / commande / alimentation','Description','text']],
@@ -37,7 +37,7 @@ const specificSchemas={
   'Vitrage':[['glassClearSize','Clair de vitrage','mm','text'],['glassMakeup','Composition du vitrage','Description','text'],['glassThickness','Épaisseur totale','mm','decimal'],['rebate','Feuillure / parcloses / calage','Description','text'],['access','Accès et moyen de levage','Description','text']]
 };
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const opt=(arr,val='')=>arr.map(x=>`<option value="${esc(x)}" ${x===val?'selected':''}>${x||'Choisir…'}</option>`).join('');
+const opt=(arr,val='')=>{const values=val&&!arr.includes(val)?[...arr,val]:arr;return values.map(x=>`<option value="${esc(x)}" ${x===val?'selected':''}>${x||'Choisir…'}</option>`).join('')};
 function micButton(target){return `<button class="mic" type="button" data-target="${target}" aria-label="Dicter ce champ" title="Dicter ce champ">🎙️</button>`}
 function associateLabels(root=document){root.querySelectorAll('label:not([for])').forEach(label=>{const control=label.parentElement?.querySelector('input:not([type="file"]),select,textarea');if(!control)return;if(!control.id)control.id='field-'+(++accessibleFieldCounter);label.htmlFor=control.id})}
 function pageLabel(page,index){return `${index+1}. ${shown(page.type,page.other)||'Type à choisir'} (${page.works?.length||1})`}
@@ -52,7 +52,7 @@ function renderPageTabs(){
 }
 function showPage(index,capture=true){
   if(capture)captureActivePage();activePageIndex=Math.max(0,Math.min(index,pages.length-1));const page=pages[activePageIndex];renderingPage=true;
-  $('pageType').value=page.type||'';$('pageOther').value=page.other||'';$('pageOtherWrap').classList.toggle('hidden',page.type!=='Autre');$('works').innerHTML='';
+  $('pageType').innerHTML=opt(workTypes,page.type||'');$('pageType').value=page.type||'';$('pageOther').value=page.other||'';$('pageOtherWrap').classList.toggle('hidden',page.type!=='Autre');$('works').innerHTML='';
   (page.works?.length?page.works:[{}]).forEach(w=>addWork({...w,type:page.type||w.type||'',other:page.other||w.other||''}));renderingPage=false;activeWorkIndex=0;renderPageTabs();
 }
 function createPage(type='',other=''){
@@ -67,7 +67,7 @@ function normalizePages(project){
 }
 function addWork(w={}){
   const page=pages[activePageIndex]||{},type=page.type||w.type||'',other=page.other||w.other||'';w={...w,type,other};
-  const id='w'+(++workCounter),d=document.createElement('div');d.className='work-card';d.dataset.id=id;d._photos=Array.isArray(w.photos)?[...w.photos]:[];d._specific=w.specific||{};d._sketches=Array.isArray(w.sketches)&&w.sketches.length?[...w.sketches]:[w.sketch||''];d._activeSketch=0;
+  const id='w'+(++workCounter),d=document.createElement('div'),mergedInfo=[w.extra,w.obs].filter(value=>String(value||'').trim()).join('\n');d.className='work-card';d.dataset.id=id;d._photos=Array.isArray(w.photos)?[...w.photos]:[];d._attachments=Array.isArray(w.attachments)?[...w.attachments]:[];d._specific=w.specific||{};d._sketches=Array.isArray(w.sketches)&&w.sketches.length?[...w.sketches]:[w.sketch||''];d._activeSketch=0;
   d.innerHTML=`<div class="work-head"><h3>Ouvrage <span class="work-number"></span></h3><button class="danger remove-work" type="button">Supprimer</button></div>
   <div class="grid">
     <select class="wtype hidden" aria-hidden="true">${opt(workTypes,w.type)}</select><input class="wother hidden" value="${esc(w.other)}" aria-hidden="true">
@@ -85,12 +85,11 @@ function addWork(w={}){
     <div><label>Épaisseur mur / profondeur</label><div class="field-with-mic"><input class="wd" value="${esc(w.depth)}" inputmode="decimal" placeholder="mm">${micButton(id+'-depth')}</div></div>
     <div><label>Quantité</label><div class="field-with-mic"><input class="wq" value="${esc(w.qty||1)}" inputmode="numeric">${micButton(id+'-qty')}</div></div>
     <div><label>Repère / localisation</label><div class="field-with-mic"><input class="wloc" value="${esc(w.location)}" placeholder="Ex. Chambre 1, OB3...">${micButton(id+'-location')}</div></div>
-    <div class="full"><label>Dimensions / cotes complémentaires</label><div class="field-with-mic"><textarea class="wextra" placeholder="Ex. clair de passage, hors-tout, réservation, coffre, jeux...">${esc(w.extra)}</textarea>${micButton(id+'-extra')}</div></div>
-    <div class="full"><label>Observations sur l'ouvrage</label><div class="field-with-mic"><textarea class="wobs" placeholder="Finition, couleur, sens d'ouverture, vitrage, occultation, contraintes...">${esc(w.obs)}</textarea>${micButton(id+'-obs')}</div></div>
+    <details class="work-extra full"><summary>Dimensions / informations complémentaires</summary><div class="work-extra-body"><div class="field-with-mic"><textarea class="wextra" placeholder="Cotes, finition, couleur, vitrage, contraintes, observations...">${esc(mergedInfo)}</textarea>${micButton(id+'-extra')}</div></div></details>
     <button class="voice-all" type="button">🎙️ Dicter toutes les informations de cet ouvrage</button>
     <div class="voice-help">Exemple : « longueur pièce 5 virgule 2 mètres », puis « largeur pièce 3 virgule 8 », puis « type parquet contrecollé ». Les champs sont remplis après chaque courte pause.</div>
-    <details class="sketch-wrap"><summary class="sketch-summary">Croquis et cotes au doigt <span class="sketch-status" aria-live="polite"></span></summary><div class="sketch-body"><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button" title="Ajouter une cote ou un texte propre">T Lettre / cote</button><button class="ghost undo-sketch" type="button" title="Annuler la dernière action">↶ Retour</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2">Fine</option><option value="4" selected>Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">« Lettre / cote » écrit proprement le texte à l’endroit touché. « Retour » annule le dernier trait, texte ou effacement.</div></div></details>
-    <details class="work-photos full"><summary class="work-photos-summary">Photos de cet ouvrage <span class="work-photos-status">Aucune photo</span></summary><div class="work-photos-body"><label>Ajouter des photos</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><div class="hint">Après la prise de vue, touchez « Ajouter à Photos », puis « Enregistrer l’image » dans la feuille de partage iPadOS.</div><div class="photo-grid wphoto-grid"></div></div></details>
+    <details class="sketch-wrap"><summary class="sketch-summary">Croquis et cotes au doigt <span class="sketch-status" aria-live="polite"></span></summary><div class="sketch-body"><div class="sketch-pages"><select class="sketch-select" aria-label="Croquis actif"></select><button class="secondary add-sketch" type="button">+ Croquis</button><button class="danger remove-sketch" type="button">Supprimer</button><button class="ghost toggle-sketch-fullscreen" type="button" aria-label="Agrandir le croquis">⛶ Agrandir</button></div><div class="sketch-tools"><button class="ghost pen tool-active" type="button" title="Dessin libre">✏️ Dessin</button><button class="ghost straight" type="button" title="Ligne droite">╱ Ligne droite</button><select class="sketch-shape" aria-label="Choisir une forme" title="Dessiner une forme"><option value="">▱ Formes</option><option value="square">Carré</option><option value="rectangle">Rectangle</option><option value="triangle">Triangle</option><option value="diamond">Losange</option><option value="circle">Cercle</option></select><button class="ghost eraser" type="button" title="Gomme">⌫ Gomme</button><button class="ghost add-text" type="button" title="Ajouter une cote ou un texte propre">T Lettre / cote</button><button class="ghost undo-sketch" type="button" title="Annuler la dernière action">↶ Retour</button><button class="danger clear-sketch" type="button">Effacer</button></div><div class="sketch-settings"><div><label>Couleur</label><div class="color-swatches"><button class="color-swatch active" type="button" data-color="#111827" style="background:#111827" aria-label="Noir"></button><button class="color-swatch" type="button" data-color="#dc2626" style="background:#dc2626" aria-label="Rouge"></button><button class="color-swatch" type="button" data-color="#2563eb" style="background:#2563eb" aria-label="Bleu"></button><button class="color-swatch" type="button" data-color="#16a34a" style="background:#16a34a" aria-label="Vert"></button><button class="color-swatch" type="button" data-color="#f59e0b" style="background:#f59e0b" aria-label="Orange"></button></div></div><div><label>Épaisseur</label><select class="sketch-width"><option value="2" selected>Fine</option><option value="4">Moyenne</option><option value="8">Épaisse</option><option value="14">Très épaisse</option></select></div><div><label>Style</label><select class="sketch-style"><option value="solid">Continu</option><option value="dotted">Pointillé</option><option value="dashed">Tirets</option></select></div></div><canvas class="sketch-canvas"></canvas><div class="hint">Choisissez une forme, puis faites glisser le doigt entre ses deux coins. « Lettre / cote » ajoute un texte propre et « Retour » annule la dernière action.</div></div></details>
+    <details class="work-photos full"><summary class="work-photos-summary">Photos et pièces jointes <span class="work-photos-status">Aucun fichier</span></summary><div class="work-photos-body"><label>Prendre des photos</label><input class="wphotos" type="file" accept="image/*" capture="environment" multiple><label class="attachment-label">Joindre depuis l’iPad : photos ou PDF</label><input class="wattachments" type="file" accept="image/*,application/pdf,.pdf" multiple><div class="hint">Les photos choisies sont ajoutées à l’ouvrage. Les PDF restent joints au dossier modifiable.</div><div class="photo-grid wphoto-grid"></div><div class="attachment-list work-attachment-list"></div></div></details>
   </div>`;
   d.querySelector('.remove-work').onclick=()=>{if(document.querySelectorAll('.work-card').length===1){alert('Il faut conserver au moins un ouvrage.');return}d.remove();renumberWorks();captureActivePage();renderPageTabs();scheduleAutosave()};
   d.querySelector('.wmaterial').onchange=e=>d.querySelector('.mother-wrap').classList.toggle('hidden',e.target.value!=='Autre');
@@ -105,8 +104,9 @@ function addWork(w={}){
   };
   d.querySelector('.winstall').onchange=refreshInstallFields;d.querySelector('.wtape').onchange=refreshInstallFields;refreshInstallFields();
   d.querySelector('.wphotos').onchange=async e=>{for(const f of e.target.files){d._photos.push(await fileToDataURL(f))}e.target.value='';renderWorkPhotos(d);scheduleAutosave()};
+  d.querySelector('.wattachments').onchange=async e=>{for(const file of e.target.files){if(file.size>25*1024*1024){alert('Le fichier « '+file.name+' » dépasse 25 Mo et n’a pas été ajouté.');continue}if(String(file.type||'').startsWith('image/'))d._photos.push(await fileToDataURL(file));else if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf'))d._attachments.push({name:file.name,type:'application/pdf',data:await fileToDataURL(file)})}e.target.value='';renderWorkPhotos(d);renderWorkAttachments(d);scheduleAutosave()};
   d.querySelector('.voice-all').onclick=()=>startFullVoice(d);
-  $('works').appendChild(d);renumberWorks();renderSpecific(d,w.type||'');bindMics(d);associateLabels(d);renderWorkPhotos(d);initSketch(d);
+  $('works').appendChild(d);renumberWorks();renderSpecific(d,w.type||'');bindMics(d);associateLabels(d);renderWorkPhotos(d);renderWorkAttachments(d);initSketch(d);
 }
 function renumberWorks(){[...document.querySelectorAll('.work-card')].forEach((d,i)=>d.querySelector('.work-number').textContent=i+1)}
 function specificData(d){const out={};d.querySelectorAll('[data-specific]').forEach(el=>out[el.dataset.specific]=el.value);return out}
@@ -126,7 +126,7 @@ function canvasPoint(canvas,e,width=canvas.width,height=canvas.height){
   return{x:(e.clientX-rect.left-borderLeft)*width/contentWidth,y:(e.clientY-rect.top-borderTop)*height/contentHeight};
 }
 function initSketch(d){
-  const details=d.querySelector('.sketch-wrap'),c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select'),textButton=d.querySelector('.add-text'),status=d.querySelector('.sketch-status');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',pendingText='',paintVersion=0,dashDistance=0;
+  const details=d.querySelector('.sketch-wrap'),c=d.querySelector('.sketch-canvas'),ctx=c.getContext('2d'),select=d.querySelector('.sketch-select'),shapeSelect=d.querySelector('.sketch-shape'),fullscreenButton=d.querySelector('.toggle-sketch-fullscreen'),textButton=d.querySelector('.add-text'),status=d.querySelector('.sketch-status');let drawing=false,last=null,start=null,preview=null,mode='pen',color='#111827',pendingText='',paintVersion=0,dashDistance=0;
   const sketchHistory=d._sketches.map(saved=>[saved||'']);
   function refreshStatus(){const count=d._sketches.filter(Boolean).length;status.textContent=count?`${count} dessin${count>1?'s':''}`:'Aucun dessin'}
   function refreshSelect(){select.innerHTML=d._sketches.map((_,i)=>`<option value="${i}" ${i===d._activeSketch?'selected':''}>Croquis ${i+1}</option>`).join('');refreshStatus()}
@@ -134,28 +134,44 @@ function initSketch(d){
   function drawingScale(){return ((c.width/Math.max(1,c.clientWidth))+(c.height/Math.max(1,c.clientHeight)))/2}
   function dash(){const scale=drawingScale(),style=d.querySelector('.sketch-style').value;return style==='dotted'?[2*scale,7*scale]:style==='dashed'?[12*scale,8*scale]:[]}
   function stroke(a,b,currentMode=mode,offset=0){const scale=drawingScale(),distance=Math.hypot(b.x-a.x,b.y-a.y);ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=currentMode==='eraser'?'#fff':color;ctx.lineWidth=(currentMode==='eraser'?26:Number(d.querySelector('.sketch-width').value))*scale;ctx.setLineDash(currentMode==='eraser'?[]:dash());ctx.lineDashOffset=-offset;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();return distance}
+  function drawShape(a,b,shape=mode){
+    const scale=drawingScale(),dx=b.x-a.x,dy=b.y-a.y;
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.lineWidth=Number(d.querySelector('.sketch-width').value)*scale;ctx.setLineDash(dash());ctx.beginPath();
+    if(shape==='square'){
+      const side=Math.max(Math.abs(dx),Math.abs(dy)),x=a.x+(dx<0?-side:side),y=a.y+(dy<0?-side:side);ctx.rect(Math.min(a.x,x),Math.min(a.y,y),side,side);
+    }else if(shape==='rectangle')ctx.rect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(dx),Math.abs(dy));
+    else if(shape==='triangle'){ctx.moveTo(a.x+dx/2,a.y);ctx.lineTo(a.x,b.y);ctx.lineTo(b.x,b.y);ctx.closePath()}
+    else if(shape==='diamond'){ctx.moveTo(a.x+dx/2,a.y);ctx.lineTo(b.x,a.y+dy/2);ctx.lineTo(a.x+dx/2,b.y);ctx.lineTo(a.x,a.y+dy/2);ctx.closePath()}
+    else if(shape==='circle')ctx.arc(a.x,a.y,Math.hypot(dx,dy),0,Math.PI*2);
+    ctx.stroke();ctx.restore();
+  }
   function paintSaved(){const version=++paintVersion,saved=d._sketches[d._activeSketch]||'';ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);if(saved){const im=new Image();im.onload=()=>{if(version===paintVersion)ctx.drawImage(im,0,0,c.width,c.height)};im.src=saved}}
   function size(){const ratio=Math.max(1,window.devicePixelRatio||1);c.width=Math.max(1,Math.round(c.clientWidth*ratio));c.height=Math.max(1,Math.round(c.clientHeight*ratio));paintSaved()}
   function currentHistory(){return sketchHistory[d._activeSketch]||(sketchHistory[d._activeSketch]=[d._sketches[d._activeSketch]||''])}
   function recordSnapshot(data){d._sketches[d._activeSketch]=data;const history=currentHistory();if(history[history.length-1]!==data)history.push(data);if(history.length>16)history.shift();refreshStatus();scheduleAutosave()}
   function saveSketch(){recordSnapshot(c.toDataURL('image/png'))}
-  function setMode(next){mode=next;pendingText='';d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));d.querySelector('.'+next).classList.add('tool-active')}
-  c.onpointerdown=e=>{paintVersion++;if(pendingText){const p=point(e),scale=drawingScale();ctx.save();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.textBaseline='bottom';ctx.fillText(pendingText,p.x,Math.max(20*scale,p.y));ctx.restore();pendingText='';textButton.classList.remove('tool-active');d.querySelector('.'+mode).classList.add('tool-active');saveSketch();e.preventDefault();return}drawing=true;dashDistance=0;start=last=point(e);preview=mode==='straight'?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
-  c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'){const p=point(e);ctx.putImageData(preview,0,0);stroke(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);dashDistance+=stroke(last,p,mode,dashDistance);last=p})}e.preventDefault()};
-  c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'){ctx.putImageData(preview,0,0);stroke(start,p)}else if(last){const distance=Math.hypot(p.x-last.x,p.y-last.y);if(distance>0)dashDistance+=stroke(last,p,mode,dashDistance);else if(dashDistance===0)stroke({x:p.x-.5*scale,y:p.y},p,mode,0)}drawing=false;saveSketch();e.preventDefault()};
-  c.onpointercancel=e=>{if(drawing){if(mode==='straight'&&preview)ctx.putImageData(preview,0,0);drawing=false}e.preventDefault()};
-  d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');d.querySelector('.eraser').onclick=()=>setMode('eraser');
+  const shapeModes=new Set(['square','rectangle','triangle','diamond','circle']);
+  function setMode(next){mode=next;pendingText='';d.querySelectorAll('.pen,.straight,.eraser,.add-text,.sketch-shape').forEach(control=>control.classList.remove('tool-active'));if(shapeModes.has(next)){shapeSelect.value=next;shapeSelect.classList.add('tool-active')}else{shapeSelect.value='';d.querySelector('.'+next).classList.add('tool-active')}}
+  c.onpointerdown=e=>{paintVersion++;if(pendingText){const p=point(e),scale=drawingScale();ctx.save();ctx.fillStyle=color;ctx.font='bold '+18*scale+'px sans-serif';ctx.textBaseline='bottom';ctx.fillText(pendingText,p.x,Math.max(20*scale,p.y));ctx.restore();pendingText='';textButton.classList.remove('tool-active');if(shapeModes.has(mode))shapeSelect.classList.add('tool-active');else d.querySelector('.'+mode).classList.add('tool-active');saveSketch();e.preventDefault();return}drawing=true;dashDistance=0;start=last=point(e);preview=(mode==='straight'||shapeModes.has(mode))?ctx.getImageData(0,0,c.width,c.height):null;c.setPointerCapture(e.pointerId);e.preventDefault()};
+  c.onpointermove=e=>{if(!drawing)return;if(mode==='straight'||shapeModes.has(mode)){const p=point(e);ctx.putImageData(preview,0,0);if(mode==='straight')stroke(start,p);else drawShape(start,p)}else{const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];samples.forEach(sample=>{const p=point(sample);dashDistance+=stroke(last,p,mode,dashDistance);last=p})}e.preventDefault()};
+  c.onpointerup=e=>{if(!drawing)return;const p=point(e),scale=drawingScale();if(mode==='straight'||shapeModes.has(mode)){ctx.putImageData(preview,0,0);if(mode==='straight')stroke(start,p);else drawShape(start,p)}else if(last){const distance=Math.hypot(p.x-last.x,p.y-last.y);if(distance>0)dashDistance+=stroke(last,p,mode,dashDistance);else if(dashDistance===0)stroke({x:p.x-.5*scale,y:p.y},p,mode,0)}drawing=false;preview=null;if(c.hasPointerCapture?.(e.pointerId))c.releasePointerCapture(e.pointerId);saveSketch();e.preventDefault()};
+  function cancelDrawing(){if(!drawing)return;if(preview)ctx.putImageData(preview,0,0);drawing=false;last=start=preview=null}
+  c.onpointercancel=e=>{cancelDrawing();e.preventDefault()};c.onlostpointercapture=cancelDrawing;
+  d.querySelector('.pen').onclick=()=>setMode('pen');d.querySelector('.straight').onclick=()=>setMode('straight');shapeSelect.onchange=()=>{if(shapeSelect.value)setMode(shapeSelect.value);else setMode('pen')};d.querySelector('.eraser').onclick=()=>setMode('eraser');
   d.querySelectorAll('.color-swatch').forEach(button=>button.onclick=()=>{color=button.dataset.color;d.querySelectorAll('.color-swatch').forEach(item=>item.classList.toggle('active',item===button))});
   select.onchange=()=>{d._activeSketch=Number(select.value);pendingText='';textButton.classList.remove('tool-active');paintSaved()};
   d.querySelector('.add-sketch').onclick=()=>{d._sketches.push('');sketchHistory.push(['']);d._activeSketch=d._sketches.length-1;refreshSelect();paintSaved();scheduleAutosave()};
   d.querySelector('.remove-sketch').onclick=()=>{if(d._sketches.length===1){alert('Il faut conserver au moins un croquis.');return}if(confirm('Supprimer ce croquis ?')){d._sketches.splice(d._activeSketch,1);sketchHistory.splice(d._activeSketch,1);d._activeSketch=Math.max(0,d._activeSketch-1);refreshSelect();paintSaved();scheduleAutosave()}};
   d.querySelector('.clear-sketch').onclick=()=>{if(confirm('Effacer entièrement ce croquis ?')){recordSnapshot('');paintSaved()}};
-  textButton.onclick=()=>{const text=prompt('Saisir la cote ou la lettre à ajouter :');if(!text?.trim())return;pendingText=text.trim();d.querySelectorAll('.pen,.straight,.eraser,.add-text').forEach(button=>button.classList.remove('tool-active'));textButton.classList.add('tool-active')};
+  textButton.onclick=()=>{const text=prompt('Saisir la cote ou la lettre à ajouter :');if(!text?.trim())return;pendingText=text.trim();d.querySelectorAll('.pen,.straight,.eraser,.add-text,.sketch-shape').forEach(control=>control.classList.remove('tool-active'));textButton.classList.add('tool-active')};
   d.querySelector('.undo-sketch').onclick=()=>{const history=currentHistory();if(history.length<=1)return;history.pop();d._sketches[d._activeSketch]=history[history.length-1];pendingText='';textButton.classList.remove('tool-active');paintSaved();scheduleAutosave()};
-  refreshSelect();if(details.open)requestAnimationFrame(size);details.addEventListener('toggle',()=>{if(details.open)requestAnimationFrame(size)});
+  function setSketchFullscreen(open){details.classList.toggle('sketch-fullscreen',open);document.body.classList.toggle('sketch-fullscreen-open',open);fullscreenButton.textContent=open?'✕ Réduire':'⛶ Agrandir';fullscreenButton.setAttribute('aria-label',open?'Réduire le croquis':'Agrandir le croquis');requestAnimationFrame(size)}
+  fullscreenButton.onclick=()=>{details.open=true;setSketchFullscreen(!details.classList.contains('sketch-fullscreen'))};
+  details.addEventListener('toggle',()=>{if(details.open)requestAnimationFrame(size);else if(details.classList.contains('sketch-fullscreen'))setSketchFullscreen(false)});
+  refreshSelect();if(details.open)requestAnimationFrame(size);
 }
 function workData(){return [...document.querySelectorAll('.work-card')].map(d=>({
-  type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,tapeThickness:d.querySelector('.wtape').value,tapeThicknessOther:d.querySelector('.wtape-other').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:d.querySelector('.wobs').value,specific:specificData(d),sketch:d._sketches?.[0]||'',sketches:Array.isArray(d._sketches)?d._sketches:[],photos:Array.isArray(d._photos)?d._photos:[]}))}
+  type:d.querySelector('.wtype').value,other:d.querySelector('.wother').value,material:d.querySelector('.wmaterial').value,materialOther:d.querySelector('.mother').value,install:d.querySelector('.winstall').value,installOther:d.querySelector('.iother').value,tapeThickness:d.querySelector('.wtape').value,tapeThicknessOther:d.querySelector('.wtape-other').value,width:d.querySelector('.ww').value,height:d.querySelector('.wh').value,sill:d.querySelector('.wa').value,depth:d.querySelector('.wd').value,qty:d.querySelector('.wq').value,location:d.querySelector('.wloc').value,extra:d.querySelector('.wextra').value,obs:'',specific:specificData(d),sketch:d._sketches?.[0]||'',sketches:Array.isArray(d._sketches)?d._sketches:[],photos:Array.isArray(d._photos)?d._photos:[],attachments:Array.isArray(d._attachments)?d._attachments:[]}))}
 function shown(v,other){return v==='Autre'?(other||'Autre'):v}
 function tapeThicknessLabel(work){const value=shown(work.tapeThickness,work.tapeThicknessOther);return value&&value!=='Autre'?value+' mm':value}
 function normalize(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
@@ -164,7 +180,7 @@ function resolveMicTarget(key){
   if(!key.includes('-'))return $(key);
   const cut=key.indexOf('-'),id=key.slice(0,cut),field=key.slice(cut+1);const d=document.querySelector(`.work-card[data-id="${id}"]`);if(!d)return null;
   if(field.startsWith('spec_'))return d.querySelector(`[data-specific="${field.slice(5)}"]`);
-  const map={type:'.wtype',other:'.wother',material:'.wmaterial',materialOther:'.mother',install:'.winstall',installOther:'.iother',tapeThickness:'.wtape',tapeThicknessOther:'.wtape-other',width:'.ww',height:'.wh',sill:'.wa',depth:'.wd',qty:'.wq',location:'.wloc',extra:'.wextra',obs:'.wobs'};return d.querySelector(map[field]);
+  const map={type:'.wtype',other:'.wother',material:'.wmaterial',materialOther:'.mother',install:'.winstall',installOther:'.iother',tapeThickness:'.wtape',tapeThicknessOther:'.wtape-other',width:'.ww',height:'.wh',sill:'.wa',depth:'.wd',qty:'.wq',location:'.wloc',extra:'.wextra',obs:'.wextra'};return d.querySelector(map[field]);
 }
 function startVoice(target,btn){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('dictationStatus').textContent='Dictée non disponible sur ce navigateur.';return}
@@ -196,8 +212,7 @@ function fillVoiceFields(d,spoken){
     {key:'depth',aliases:['epaisseur du mur','epaisseur mur','profondeur'],el:d.querySelector('.wd'),unit:'mm'},
     {key:'qty',aliases:['quantite','nombre ouvrages'],el:d.querySelector('.wq'),unit:'Nombre'},
     {key:'location',aliases:['repere localisation','localisation','repere'],el:d.querySelector('.wloc')},
-    {key:'extra',aliases:['dimensions complementaires','cotes complementaires'],el:d.querySelector('.wextra')},
-    {key:'obs',aliases:['observations','observation','remarque'],el:d.querySelector('.wobs'),append:true}
+    {key:'extra',aliases:['dimensions complementaires','cotes complementaires','informations complementaires','observations','observation','remarque'],el:d.querySelector('.wextra'),append:true}
   ];
   const entries=common.concat(schema.map(([key,label,unit])=>({key,aliases:voiceAliases(key,label),unit,el:d.querySelector('[data-specific="'+key+'"]')}))).filter(entry=>entry.el);
   const hits=[];entries.forEach(entry=>entry.aliases.forEach(alias=>{let from=0,index;while((index=text.indexOf(alias,from))>=0){const before=text[index-1],after=text[index+alias.length];if((!before||/[^a-z0-9]/.test(before))&&(!after||/[^a-z0-9]/.test(after)))hits.push({i:index,alias,entry});from=index+alias.length}}));
@@ -300,12 +315,14 @@ $('photoText').onclick=()=>{if(!photoEditorState)return;const text=prompt('Texte
 $('photoUndo').onclick=()=>{if(photoHistory.length<=1)return;photoHistory.pop();photoCtx.putImageData(photoHistory[photoHistory.length-1],0,0)};
 $('savePhotoEdit').onclick=()=>{if(!photoEditorState)return;const {work,index}=photoEditorState;work._photos[index]=photoCanvas.toDataURL('image/jpeg',.9);renderWorkPhotos(work);scheduleAutosave();closePhotoEditor()};
 $('closePhotoEditor').onclick=$('cancelPhotoEdit').onclick=closePhotoEditor;
-function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid'),status=d.querySelector('.work-photos-status');if(!g)return;const count=(d._photos||[]).length;if(status)status.textContent=count?count+' photo'+(count>1?'s':''):'Aucune photo';g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img'),actions=document.createElement('div'),saveButton=document.createElement('button'),edit=document.createElement('button'),remove=document.createElement('button');wrap.className='photo-thumb';actions.className='photo-actions';img.src=src;img.alt='Photo ouvrage';img.onclick=()=>openPhotoEditor(d,i);saveButton.type=edit.type=remove.type='button';saveButton.className='secondary save-photo';edit.className='secondary';remove.className='danger';saveButton.textContent='Ajouter à Photos';edit.textContent='Annoter';remove.textContent='Supprimer';saveButton.onclick=()=>savePhotoToDevice(src,i);edit.onclick=()=>openPhotoEditor(d,i);remove.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d);scheduleAutosave()}};actions.append(saveButton,edit,remove);wrap.append(img,actions);g.appendChild(wrap)})}
+function renderWorkPhotos(d){const g=d.querySelector('.wphoto-grid'),status=d.querySelector('.work-photos-status');if(!g)return;const count=(d._photos||[]).length,attachmentCount=(d._attachments||[]).length;if(status)status.textContent=count||attachmentCount?[count?count+' photo'+(count>1?'s':''):'',attachmentCount?attachmentCount+' PDF':''].filter(Boolean).join(' • '):'Aucun fichier';g.innerHTML='';(d._photos||[]).forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img'),actions=document.createElement('div'),saveButton=document.createElement('button'),edit=document.createElement('button'),remove=document.createElement('button');wrap.className='photo-thumb';actions.className='photo-actions';img.src=src;img.alt='Photo ouvrage';img.onclick=()=>openPhotoEditor(d,i);saveButton.type=edit.type=remove.type='button';saveButton.className='secondary save-photo';edit.className='secondary';remove.className='danger';saveButton.textContent='Ajouter à Photos';edit.textContent='Annoter';remove.textContent='Supprimer';saveButton.onclick=()=>savePhotoToDevice(src,i);edit.onclick=()=>openPhotoEditor(d,i);remove.onclick=()=>{if(confirm('Supprimer cette photo de l\'ouvrage ?')){d._photos.splice(i,1);renderWorkPhotos(d);scheduleAutosave()}};actions.append(saveButton,edit,remove);wrap.append(img,actions);g.appendChild(wrap)})}
+function downloadAttachment(item){const link=document.createElement('a');link.href=item.data;link.download=item.name||'piece-jointe.pdf';document.body.appendChild(link);link.click();link.remove()}
+function renderWorkAttachments(d){const box=d.querySelector('.work-attachment-list');if(!box)return;box.innerHTML='';(d._attachments||[]).forEach((item,index)=>{const row=document.createElement('div'),name=document.createElement('span'),open=document.createElement('button'),remove=document.createElement('button');row.className='attachment-item';name.textContent=item.name||'Document PDF';open.type=remove.type='button';open.className='secondary';remove.className='danger';open.textContent='Ouvrir';remove.textContent='Supprimer';open.onclick=()=>downloadAttachment(item);remove.onclick=()=>{if(confirm('Supprimer cette pièce jointe ?')){d._attachments.splice(index,1);renderWorkAttachments(d);renderWorkPhotos(d);scheduleAutosave()}};row.append(name,open,remove);box.appendChild(row)})}
 function renderPhotos(){const g=$('photoGrid'),status=$('generalPhotosSection')?.querySelector('.section-status');if(status)status.textContent=photoData.length?photoData.length+' photo'+(photoData.length>1?'s':''):'Aucune photo';g.innerHTML='';photoData.forEach((src,i)=>{const wrap=document.createElement('div'),img=document.createElement('img'),actions=document.createElement('div'),saveButton=document.createElement('button'),remove=document.createElement('button');wrap.className='photo-thumb';actions.className='photo-actions';img.src=src;img.alt='Photo générale du chantier';saveButton.type=remove.type='button';saveButton.className='secondary save-photo';remove.className='danger';saveButton.textContent='Ajouter à Photos';remove.textContent='Supprimer';saveButton.onclick=()=>savePhotoToDevice(src,i);remove.onclick=()=>{if(confirm('Supprimer cette photo ?')){photoData.splice(i,1);renderPhotos();scheduleAutosave()}};actions.append(saveButton,remove);wrap.append(img,actions);g.appendChild(wrap)})}
 function projectPagesData(){captureActivePage();return pages.map(page=>({...page,works:(page.works||[]).map(w=>({...w,type:page.type,other:page.other}))}))}
 function baseLines(){
   let lines=[`Chantier : ${$('projectTitle').value||'-'}`,`Client : ${$('contactName').value||'-'}`];if($('contactPhone').value)lines.push(`Téléphone : ${$('contactPhone').value}`);if($('contactEmail').value)lines.push(`E-mail : ${$('contactEmail').value}`);if($('address').value)lines.push(`Adresse : ${$('address').value}`);const supplierNames=[...new Set([$('supplier').value,...suppliers].filter(Boolean))];if(supplierNames.length)lines.push(`Fabricants / fournisseurs : ${supplierNames.join(', ')}`);
-  projectPagesData().forEach((page,pageIndex)=>{lines.push('',`PAGE ${pageIndex+1} — ${shown(page.type,page.other)||'Type non renseigné'}`);page.works.forEach((w,i)=>{lines.push(`Ouvrage ${i+1}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.install==="Avec tapées d'isolation"&&w.tapeThickness)lines.push(`Épaisseur des tapées : ${tapeThicknessLabel(w)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.specific?.frameSize)lines.push(`Dimensions hors-tout : ${w.specific.frameSize}`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[page.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Cotes complémentaires : ${w.extra}`);if(w.obs)lines.push(`Observations : ${w.obs}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);{const sketchCount=Array.isArray(w.sketches)?w.sketches.filter(Boolean).length:(w.sketch?1:0);if(sketchCount)lines.push(`Croquis associés : ${sketchCount}`)}})});
+  projectPagesData().forEach((page,pageIndex)=>{lines.push('',`PAGE ${pageIndex+1} — ${shown(page.type,page.other)||'Type non renseigné'}`);page.works.forEach((w,i)=>{lines.push(`Ouvrage ${i+1}`);if(w.location)lines.push(`Repère / localisation : ${w.location}`);if(w.material)lines.push(`Matériau : ${shown(w.material,w.materialOther)}`);if(w.install)lines.push(`Type de pose : ${shown(w.install,w.installOther)}`);if(w.install==="Avec tapées d'isolation"&&w.tapeThickness)lines.push(`Épaisseur des tapées : ${tapeThicknessLabel(w)}`);if(w.width||w.height)lines.push(`Dimensions : ${w.width||'-'} x ${w.height||'-'} mm`);if(w.specific?.frameSize)lines.push(`Dimensions hors-tout : ${w.specific.frameSize}`);if(w.sill)lines.push(`Hauteur d'allège : ${w.sill} mm`);if(w.depth)lines.push(`Épaisseur / profondeur : ${w.depth} mm`);if(w.qty)lines.push(`Quantité : ${w.qty}`);(specificSchemas[page.type]||[]).forEach(([key,label,unit])=>{if(w.specific?.[key])lines.push(`${label} : ${w.specific[key]}${['mm','m','m²','ml'].includes(unit)?' '+unit:''}`)});if(w.extra)lines.push(`Informations complémentaires : ${w.extra}`);if(w.obs)lines.push(`Informations complémentaires : ${w.obs}`);if(w.attachments?.length)lines.push(`Pièces jointes PDF : ${w.attachments.map(item=>item.name||'Document PDF').join(', ')}`);if(w.photos?.length)lines.push(`Photos associées : ${w.photos.length}`);{const sketchCount=Array.isArray(w.sketches)?w.sketches.filter(Boolean).length:(w.sketch?1:0);if(sketchCount)lines.push(`Croquis associés : ${sketchCount}`)}})});
   if($('notes').value)lines.push('',`Notes chantier générales : ${$('notes').value}`);return lines;
 }
 function renderSuppliers(){const box=$('supplierList'),options=$('supplierOptions');box.innerHTML='';options.innerHTML=suppliers.map(name=>`<option value="${esc(name)}"></option>`).join('');suppliers.forEach((name,index)=>{const item=document.createElement('div'),label=document.createElement('span'),remove=document.createElement('button');item.className='supplier-item';label.textContent=name;remove.type='button';remove.className='danger';remove.textContent='×';remove.setAttribute('aria-label','Supprimer '+name);remove.onclick=()=>{suppliers.splice(index,1);renderSuppliers();scheduleAutosave()};item.append(label,remove);box.appendChild(item)})}
@@ -374,7 +391,7 @@ async function createProjectPdfFile(){
         if(work.width||work.height)field('Dimensions',(work.width||'-')+' x '+(work.height||'-'),'mm');field('Dimensions hors-tout',work.specific?.frameSize);
         field("Hauteur d'allège",work.sill,'mm');field('Épaisseur / profondeur',work.depth,'mm');field('Quantité',work.qty);field('Repère / localisation',work.location);
         (specificSchemas[page.type]||[]).forEach(([key,label,unit])=>field(label,work.specific?.[key],unit));
-        field('Cotes complémentaires',work.extra);field('Observations',work.obs);
+        field('Informations complémentaires',work.extra||work.obs);if(work.attachments?.length)field('Pièces jointes PDF',work.attachments.map(item=>item.name||'Document PDF').join(', '));
         await imageList('Photos - page '+(pageIndex+1)+', ouvrage '+(workIndex+1),work.photos);
         const sketches=Array.isArray(work.sketches)?work.sketches.filter(Boolean):(work.sketch?[work.sketch]:[]);
         await imageList('Croquis - page '+(pageIndex+1)+', ouvrage '+(workIndex+1),sketches);
@@ -424,30 +441,56 @@ function projectBackupFileName(project,exportedAt){
   const stamp=exportedAt.replace(/[-:]/g,'').replace('T','-').slice(0,15);
   return 'releve-de-cotes-'+base+'-'+stamp+'.json';
 }
-async function currentProjectFiles(){
+const ZIP_CRC_TABLE=(()=>{const table=new Uint32Array(256);for(let n=0;n<256;n++){let value=n;for(let bit=0;bit<8;bit++)value=value&1?0xedb88320^(value>>>1):value>>>1;table[n]=value>>>0}return table})();
+function zipCrc32(bytes){let crc=0xffffffff;for(const byte of bytes)crc=ZIP_CRC_TABLE[(crc^byte)&255]^(crc>>>8);return(crc^0xffffffff)>>>0}
+function zipPush16(out,value){out.push(value&255,(value>>>8)&255)}
+function zipPush32(out,value){out.push(value&255,(value>>>8)&255,(value>>>16)&255,(value>>>24)&255)}
+function dataUrlBytes(source){const comma=source.indexOf(',');if(comma<0)throw new Error('Une photo est illisible.');const meta=source.slice(0,comma),payload=source.slice(comma+1);if(meta.includes(';base64')){const binary=atob(payload),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}return new TextEncoder().encode(decodeURIComponent(payload))}
+function archivePart(value,fallback){return String(value||fallback).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||fallback}
+function photoExtension(source){const mime=String(source).slice(5,String(source).indexOf(';')).toLowerCase();return({jpeg:'jpg',jpg:'jpg',png:'png',webp:'webp',heic:'heic',heif:'heif',gif:'gif'})[mime.split('/')[1]]||'jpg'}
+function photoArchiveFile(project){
+  const entries=[],addPhotos=(photos,prefix)=>{(photos||[]).filter(Boolean).forEach((source,index)=>entries.push({name:prefix+'photo-'+String(index+1).padStart(3,'0')+'.'+photoExtension(source),source}))};
+  addPhotos(project.photos,'photos-generales/');
+  normalizePages(project).forEach((page,pageIndex)=>(page.works||[]).forEach((work,workIndex)=>addPhotos(work.photos,'pages/page-'+String(pageIndex+1).padStart(2,'0')+'-'+archivePart(shown(page.type,page.other),'ouvrage')+'/ouvrage-'+String(workIndex+1).padStart(2,'0')+'/')));
+  if(!entries.length)throw new Error('Aucune photo n’est enregistrée dans ce chantier.');
+  const encoder=new TextEncoder(),now=new Date(),dosTime=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1),dosDate=((Math.max(1980,now.getFullYear())-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(),localParts=[],centralParts=[];let offset=0,centralSize=0;
+  entries.forEach(entry=>{
+    const name=encoder.encode(entry.name),data=dataUrlBytes(entry.source),crc=zipCrc32(data),local=[];
+    zipPush32(local,0x04034b50);zipPush16(local,20);zipPush16(local,0);zipPush16(local,0);zipPush16(local,dosTime);zipPush16(local,dosDate);zipPush32(local,crc);zipPush32(local,data.length);zipPush32(local,data.length);zipPush16(local,name.length);zipPush16(local,0);
+    const localBytes=new Uint8Array(local);localParts.push(localBytes,name,data);
+    const central=[];zipPush32(central,0x02014b50);zipPush16(central,20);zipPush16(central,20);zipPush16(central,0);zipPush16(central,0);zipPush16(central,dosTime);zipPush16(central,dosDate);zipPush32(central,crc);zipPush32(central,data.length);zipPush32(central,data.length);zipPush16(central,name.length);zipPush16(central,0);zipPush16(central,0);zipPush16(central,0);zipPush16(central,0);zipPush32(central,0);zipPush32(central,offset);
+    const centralBytes=new Uint8Array(central);centralParts.push(centralBytes,name);centralSize+=centralBytes.length+name.length;offset+=localBytes.length+name.length+data.length;
+  });
+  const end=[];zipPush32(end,0x06054b50);zipPush16(end,0);zipPush16(end,0);zipPush16(end,entries.length);zipPush16(end,entries.length);zipPush32(end,centralSize);zipPush32(end,offset);zipPush16(end,0);
+  const filename='photos-'+archivePart(project.projectTitle||project.contactName,'chantier')+'-'+new Date().toISOString().slice(0,10)+'.zip';
+  return new File([...localParts,...centralParts,new Uint8Array(end)],filename,{type:'application/zip'});
+}
+async function currentProjectFile(format){
   const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
   if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
-  const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
-  const appFile=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),pdfFile=await createProjectPdfFile();
-  return{project,files:[pdfFile,appFile]};
+  if(format==='json'){
+    const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
+    return{project,file:new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),label:'fichier modifiable complet'};
+  }
+  return{project,file:photoArchiveFile(project),label:'archive ZIP contenant toutes les photos'};
 }
 async function shareCurrentProjectBackup(destination){
   $('projectsSection').open=true;
   if(destination==='kdrive'&&!navigator.onLine){setBackupStatus('Hors connexion : le relevé reste enregistré dans l’iPad. Utilisez « Enregistrer sur l’iPad », puis envoyez-le vers kDrive lorsque le réseau revient.',true);return false}
-  const {project,files}=await currentProjectFiles(),local=destination==='local';
+  const format=$('exportFormat')?.value||'photos',{file,label}=await currentProjectFile(format),files=[file],local=destination==='local';
   setBackupStatus(local?'Choisissez « Enregistrer dans Fichiers », puis « Sur mon iPad ».':'Choisissez kDrive, puis le dossier « Relevés de cotes ».');
   if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
-      await navigator.share({title:'Relevé de cotes - '+(project.projectTitle||project.contactName||'Chantier'),files});
-      setBackupStatus(local?'PDF et fichier modifiable remis à Fichiers. Vérifiez leur présence dans « Sur mon iPad ».':'PDF et fichier modifiable remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
+      await navigator.share({files});
+      setBackupStatus(local?label+' remis à Fichiers. Vérifiez sa présence dans « Sur mon iPad ».':label+' remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
       return true;
     }catch(error){
       if(error?.name==='AbortError'){setBackupStatus(local?'Copie dans Fichiers annulée. Le relevé reste enregistré dans l’application.':'Envoi vers kDrive annulé. Le relevé reste enregistré dans l’iPad.');return false}
       throw error;
     }
   }
-  files.forEach(downloadBackupFile);
-  setBackupStatus(local?'PDF et fichier modifiable téléchargés sur l’appareil.':'Partage kDrive indisponible : les fichiers ont été téléchargés sur l’appareil pour un envoi ultérieur.');
+  downloadBackupFile(file);
+  setBackupStatus(local?label+' téléchargé sur l’appareil.':'Partage kDrive indisponible : le fichier a été téléchargé sur l’appareil pour un envoi ultérieur.');
   return true;
 }
 function validateBackup(backup){
@@ -455,6 +498,7 @@ function validateBackup(backup){
   if(!backup.projects.every(project=>project&&typeof project==='object'&&Number.isFinite(project.id)&&(project.updated===undefined||Number.isFinite(project.updated))&&(project.pages===undefined||Array.isArray(project.pages))&&(project.photos===undefined||Array.isArray(project.photos))))throw new Error('La sauvegarde contient un dossier incomplet ou endommagé.');
 }
 async function importBackupFile(file){
+  $('projectsSection').open=true;
   setBackupStatus('Lecture de la sauvegarde…');
   try{
     if(file.size>MAX_BACKUP_SIZE)throw new Error('Le fichier dépasse la taille maximale de 250 Mo.');
@@ -561,6 +605,14 @@ function clearForm(){clearTimeout(autoSaveTimer);currentId=null;fields.forEach(f
 $('saveProject').onclick=saveOfflineCopy;$('newProject').onclick=()=>{if(confirm('Créer un nouveau relevé ?'))clearForm()};$('voiceAssistant').onclick=startVoiceAssistant;
 $('exportBackup').onclick=sendToKDrive;window.addEventListener('online',updateConnectionStatus);window.addEventListener('offline',updateConnectionStatus);updateConnectionStatus();
 $('backupFile').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(file)await importBackupFile(file)};
+if('launchQueue' in window){
+  window.launchQueue.setConsumer(async launchParams=>{
+    const handle=launchParams.files?.[0];
+    if(!handle)return;
+    try{await importBackupFile(await handle.getFile())}
+    catch(error){console.error("Échec de l'ouverture directe",error);$('projectsSection').open=true;setBackupStatus("Le fichier n’a pas pu être ouvert : "+(error.message||'erreur inconnue'),true)}
+  });
+}
 function trackEditableChange(event){
   const target=event.target;
   if(target.matches('input:not([type="file"]),select,textarea')&&target.id!=='summary')scheduleAutosave();
@@ -579,3 +631,4 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 }
 $('projectDate').value=new Date().toISOString().slice(0,10);bindMics();associateLabels();renderSuppliers();pages=[{id:Date.now(),type:'',other:'',works:[{}]}];showPage(0,false);renderProjects();
+

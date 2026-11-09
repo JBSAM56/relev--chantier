@@ -101,10 +101,7 @@
     <summary class="card-summary">Mes projets enregistrés<span class="section-status">Chargement…</span></summary>
     <div class="collapsible-card-body">
     <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
-    <div class="row" style="margin-top:12px">
-      <button class="secondary" id="exportBackup" type="button">Envoyer vers kDrive</button>
-    </div>
-    <div class="hint"><strong>Deux copies séparées :</strong> « Enregistrer sur l’iPad » crée le PDF et le fichier modifiable dans Fichiers, même hors connexion. « Envoyer vers kDrive » nécessite une connexion.</div>
+    <div class="hint"><strong>Un fichier à la fois :</strong> choisissez l’archive ZIP pour récupérer toutes les photos comme images séparées, ou le fichier modifiable pour conserver tout le chantier avec ses croquis et PDF joints.</div>
     <div class="status" id="connectionStatus" role="status" aria-live="polite"></div>
     <div class="hint">Le fichier JSON permet de rouvrir et modifier le relevé avec ses photos et croquis.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
@@ -128,7 +125,7 @@
     <div class="editor-actions"><button class="ghost" id="cancelPhotoEdit" type="button">Fermer sans enregistrer</button><button class="primary" id="savePhotoEdit" type="button">Enregistrer l’annotation</button></div>
   </div>
 </div>
-<div class="footerbar"><button class="primary" id="saveProject" type="button">Enregistrer sur l’iPad</button><button class="secondary" id="newProject" type="button">Nouveau</button><label class="file-picker ghost" for="backupFile">Importer</label></div>
+<div class="footerbar"><select id="exportFormat" aria-label="Fichier à créer"><option value="photos">Toutes les photos (.zip)</option><option value="json">Fichier modifiable complet</option></select><button class="primary" id="saveProject" type="button">Enregistrer sur l’iPad</button><button class="kdrive-action" id="exportBackup" type="button">Envoyer vers kDrive</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
 <script src="jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 </body></html>
