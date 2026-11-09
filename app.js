@@ -441,30 +441,32 @@ function projectBackupFileName(project,exportedAt){
   const stamp=exportedAt.replace(/[-:]/g,'').replace('T','-').slice(0,15);
   return 'releve-de-cotes-'+base+'-'+stamp+'.json';
 }
-async function currentProjectFiles(){
+async function currentProjectFile(format){
   const projects=await allProjects(),project=projects.find(item=>item.id===currentId);
   if(!project)throw new Error("le relevé courant n'a pas été retrouvé");
-  const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
-  const appFile=new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),pdfFile=await createProjectPdfFile();
-  return{project,files:[pdfFile,appFile]};
+  if(format==='json'){
+    const exportedAt=new Date().toISOString(),backup={format:BACKUP_FORMAT,version:BACKUP_VERSION,exportedAt,projects:[project]};
+    return{project,file:new File([JSON.stringify(backup)],projectBackupFileName(project,exportedAt),{type:'application/json'}),label:'fichier modifiable complet'};
+  }
+  return{project,file:await createProjectPdfFile(),label:'PDF complet avec toutes les photos'};
 }
 async function shareCurrentProjectBackup(destination){
   $('projectsSection').open=true;
   if(destination==='kdrive'&&!navigator.onLine){setBackupStatus('Hors connexion : le relevé reste enregistré dans l’iPad. Utilisez « Enregistrer sur l’iPad », puis envoyez-le vers kDrive lorsque le réseau revient.',true);return false}
-  const {project,files}=await currentProjectFiles(),local=destination==='local';
+  const format=$('exportFormat')?.value||'pdf',{file,label}=await currentProjectFile(format),files=[file],local=destination==='local';
   setBackupStatus(local?'Choisissez « Enregistrer dans Fichiers », puis « Sur mon iPad ».':'Choisissez kDrive, puis le dossier « Relevés de cotes ».');
   if(navigator.share&&navigator.canShare&&navigator.canShare({files})){
     try{
       await navigator.share({files});
-      setBackupStatus(local?'PDF et fichier modifiable remis à Fichiers. Vérifiez leur présence dans « Sur mon iPad ».':'PDF et fichier modifiable remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
+      setBackupStatus(local?label+' remis à Fichiers. Vérifiez sa présence dans « Sur mon iPad ».':label+' remis à kDrive. Vérifiez la fin du transfert dans l’application kDrive.');
       return true;
     }catch(error){
       if(error?.name==='AbortError'){setBackupStatus(local?'Copie dans Fichiers annulée. Le relevé reste enregistré dans l’application.':'Envoi vers kDrive annulé. Le relevé reste enregistré dans l’iPad.');return false}
       throw error;
     }
   }
-  files.forEach(downloadBackupFile);
-  setBackupStatus(local?'PDF et fichier modifiable téléchargés sur l’appareil.':'Partage kDrive indisponible : les fichiers ont été téléchargés sur l’appareil pour un envoi ultérieur.');
+  downloadBackupFile(file);
+  setBackupStatus(local?label+' téléchargé sur l’appareil.':'Partage kDrive indisponible : le fichier a été téléchargé sur l’appareil pour un envoi ultérieur.');
   return true;
 }
 function validateBackup(backup){
