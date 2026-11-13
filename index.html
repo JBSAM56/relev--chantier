@@ -16,10 +16,10 @@
 <header><div class="header-inner"><img class="brand-logo" src="logo-sam.png" alt="SAM, Artisans Menuisiers depuis 1970"><div class="header-title"><h1>Relevé Chantier</h1><small>Croquis tactile et assistant vocal</small></div></div></header>
 <main>
   <div class="top-actions">
-    <label class="file-picker ghost open-project" for="backupFile">Ouvrir un relevé de chantier</label>
+    <label class="file-picker ghost open-project" for="backupFile">Ouvrir un dossier de chantier</label>
     <button class="voice-compact" id="voiceAssistant" type="button">🎙️ Assistant vocal</button>
   </div>
-  <input class="file-input" id="backupFile" type="file" accept="application/json,.json" />
+  <input class="file-input" id="backupFile" type="file" accept="application/json,.json,application/zip,.zip" />
   <div class="voice-feedback" id="voiceFeedback">Assistant vocal prêt. Touchez le micro pour démarrer.</div>
   <details class="voice-examples"><summary class="hint" style="cursor:pointer">Voir des exemples de commandes</summary><div class="command-list">
     « Enregistrer le chantier » • « Nouvelle page parquet » • « Ajouter un ouvrage parquet » • « Ajouter un escalier » • « Modifier l’ouvrage 2 » • « Supprimer le dernier ouvrage »<br>
@@ -101,9 +101,9 @@
     <summary class="card-summary">Mes projets enregistrés<span class="section-status">Chargement…</span></summary>
     <div class="collapsible-card-body">
     <div id="projectList"><span class="hint">Aucun projet enregistré.</span></div>
-    <div class="hint"><strong>Un fichier à la fois :</strong> choisissez l’archive ZIP pour récupérer toutes les photos comme images séparées, ou le fichier modifiable pour conserver tout le chantier avec ses croquis et PDF joints.</div>
+    <div class="hint"><strong>Dossier complet :</strong> le ZIP contient le rapport PDF, toutes les photos JPEG, les pièces jointes et le fichier permettant de rouvrir le chantier.</div>
     <div class="status" id="connectionStatus" role="status" aria-live="polite"></div>
-    <div class="hint">Le fichier JSON permet de rouvrir et modifier le relevé avec ses photos et croquis.</div>
+    <div class="hint">Le bouton « Ouvrir un dossier de chantier » accepte le nouveau ZIP complet et les anciennes sauvegardes JSON.</div>
     <div class="status" id="backupStatus" role="status" aria-live="polite"></div>
     <div class="status" id="storageStatus" role="status" aria-live="polite"></div>
 
@@ -125,7 +125,8 @@
     <div class="editor-actions"><button class="ghost" id="cancelPhotoEdit" type="button">Fermer sans enregistrer</button><button class="primary" id="savePhotoEdit" type="button">Enregistrer l’annotation</button></div>
   </div>
 </div>
-<div class="footerbar"><select id="exportFormat" aria-label="Fichier à créer"><option value="photos">Toutes les photos (.zip)</option><option value="json">Fichier modifiable complet</option></select><button class="primary" id="saveProject" type="button">Enregistrer sur l’iPad</button><button class="kdrive-action" id="exportBackup" type="button">Envoyer vers kDrive</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
+<div class="footerbar"><select id="exportFormat" aria-label="Dossier complet à créer"><option value="package">Dossier complet (.zip)</option></select><button class="primary" id="saveProject" type="button">Enregistrer sur l’iPad</button><button class="kdrive-action" id="exportBackup" type="button">Envoyer vers kDrive</button><button class="secondary" id="newProject" type="button">Nouveau</button></div>
 <script src="jspdf.umd.min.js"></script>
 <script src="app.js"></script>
+<script src="project-package.js"></script>
 </body></html>
